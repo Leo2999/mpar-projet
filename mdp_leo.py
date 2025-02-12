@@ -4,19 +4,8 @@ from gramListener import gramListener
 from gramParser import gramParser
 import sys
 from graphviz import Digraph
+from models import TemporaryModel
 
-
-
-class MarkovChain:
-    def __init__(self):
-        self.states = []
-        self.transitions = []
-
-class MarkovDecisionProcess(MarkovChain):
-    def __init__(self):
-        super().__init__()
-        self.actions = []
-        self.transitions_with_actions = []
         
 class gramPrintListener(gramListener):
 
@@ -25,11 +14,11 @@ class gramPrintListener(gramListener):
 
     def enterDefstates(self, ctx):
         self.model.states = [str(x) for x in ctx.ID()]
-        print("States: %s" % str(self.states))
+        print("States: %s" % str(self.model.states))
 
     def enterDefactions(self, ctx):
         self.model.actions = str([str(x) for x in ctx.ID()])
-        print("Actions: %s" % str(self.actions))
+        print("Actions: %s" % str(self.model.actions))
 
     def enterTransact(self, ctx):
         ids = [str(x) for x in ctx.ID()]
@@ -37,8 +26,8 @@ class gramPrintListener(gramListener):
         act = ids.pop(0)
         weights = [int(str(x)) for x in ctx.INT()]
 
-
-        self.transact.append({"from": dep, "action": act, "to": ids,"weights": weights})
+        for i in range(len(ids)):
+            self.model.transitions_with_actions.append({'from': dep, 'action': act, 'to': ids[i], 'weight': weights[i]})
 
         print("Transition from %s with action %s and targets %s with weights %s" % (dep, act, ids, weights))
 
@@ -47,7 +36,8 @@ class gramPrintListener(gramListener):
         dep = ids.pop(0)
         weights = [int(str(x)) for x in ctx.INT()]
 
-        self.transnoact.append({"from": dep, "to": ids, "weights": weights})
+        for i in range(len(ids)):
+            self.model.transitions.append({'from': dep, 'to': ids[i], 'weight': weights[i]})
 
         print("Transition from %s with no action and targets %s with weights %s" % (dep, ids, weights))   
 
@@ -60,22 +50,15 @@ def main():
     stream = CommonTokenStream(lexer)
     parser = gramParser(stream)
     tree = parser.program()
-    printer = gramPrintListener()
+    model = TemporaryModel()
+    printer = gramPrintListener(model)
     walker = ParseTreeWalker()
     walker.walk(printer, tree)
 
-    g = Digraph('Markov', filename='markov.gv')
-    g.attr(ranksep="1.5", nodesep="1.0", overlap="false", constraint="false")
-    
-    for trans in printer.transnoact:
-        for i, end in enumerate(trans['to']):
-            g.edge(trans['from'], end, label=str(trans['weights'][i]))
-
-    for trans in printer.transact:
-        for i, end in enumerate(trans['to']):
-            g.edge(trans['from'], end, label=f'{trans['action']}({str(trans['weights'][i])})')
-
-    g.view()
+    print(model.states)
+    print(model.actions)
+    print(model.transitions)
+    print(model.transitions_with_actions)
 
 if __name__ == '__main__':
     main()
