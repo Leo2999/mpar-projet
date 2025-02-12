@@ -6,21 +6,29 @@ import sys
 from graphviz import Digraph
 
 
+
+class MarkovChain:
+    def __init__(self):
+        self.states = []
+        self.transitions = []
+
+class MarkovDecisionProcess(MarkovChain):
+    def __init__(self):
+        super().__init__()
+        self.actions = []
+        self.transitions_with_actions = []
         
 class gramPrintListener(gramListener):
 
-    def __init__(self):
-        self.states = []
-        self.actions = []
-        self.transact = []
-        self.transnoact = []
-        
+    def __init__(self, model):
+        self.model = model
+
     def enterDefstates(self, ctx):
-        self.states = [str(x) for x in ctx.ID()]
+        self.model.states = [str(x) for x in ctx.ID()]
         print("States: %s" % str(self.states))
 
     def enterDefactions(self, ctx):
-        self.actions = str([str(x) for x in ctx.ID()])
+        self.model.actions = str([str(x) for x in ctx.ID()])
         print("Actions: %s" % str(self.actions))
 
     def enterTransact(self, ctx):
@@ -28,6 +36,7 @@ class gramPrintListener(gramListener):
         dep = ids.pop(0)
         act = ids.pop(0)
         weights = [int(str(x)) for x in ctx.INT()]
+
 
         self.transact.append({"from": dep, "action": act, "to": ids,"weights": weights})
 
@@ -54,6 +63,19 @@ def main():
     printer = gramPrintListener()
     walker = ParseTreeWalker()
     walker.walk(printer, tree)
+
+    g = Digraph('Markov', filename='markov.gv')
+    g.attr(ranksep="1.5", nodesep="1.0", overlap="false", constraint="false")
+    
+    for trans in printer.transnoact:
+        for i, end in enumerate(trans['to']):
+            g.edge(trans['from'], end, label=str(trans['weights'][i]))
+
+    for trans in printer.transact:
+        for i, end in enumerate(trans['to']):
+            g.edge(trans['from'], end, label=f'{trans['action']}({str(trans['weights'][i])})')
+
+    g.view()
 
 if __name__ == '__main__':
     main()

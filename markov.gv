@@ -1,0 +1,12 @@
+digraph Markov {
+	constraint=false nodesep=1.0 overlap=false ranksep=1.5
+	S0 -> S1 [label=5]
+	S0 -> S2 [label=5]
+	S1 -> S1 [label="b(2)"]
+	S1 -> S0 [label="b(8)"]
+	S1 -> S2 [label="a(1)"]
+	S1 -> S0 [label="a(3)"]
+	S1 -> S1 [label="a(6)"]
+	S2 -> S0 [label="c(5)"]
+	S2 -> S1 [label="c(5)"]
+}
