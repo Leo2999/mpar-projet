@@ -1,0 +1,20 @@
+digraph Markov {
+	rankdir=LR size="8,5"
+	node [shape=circle]
+	S0
+	S1
+	S2
+	choice_S1 [shape=circle width=0.01]
+	S1 -> choice_S1
+	choice_S1 -> S1 [label="b (2)"]
+	choice_S1 -> S0 [label="b (8)"]
+	choice_S1 -> S2 [label="a (1)"]
+	choice_S1 -> S0 [label="a (3)"]
+	choice_S1 -> S1 [label="a (6)"]
+	choice_S2 [shape=circle width=0.01]
+	S2 -> choice_S2
+	choice_S2 -> S0 [label="c (5)"]
+	choice_S2 -> S1 [label="c (5)"]
+	S0 -> S1 [label=5]
+	S0 -> S2 [label=5]
+}
