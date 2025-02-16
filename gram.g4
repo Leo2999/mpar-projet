@@ -1,12 +1,11 @@
 grammar gram;
 
 program
-    : defstates defactions transitions EOF
+    : defstates defactions? transitions EOF
     ;
 
 defstates : STATES ID (',' ID)* ';';
-defactions : ACTIONS ID (',' ID)* ';';
-
+defactions : ACTIONS ID (',' ID)* ';'?;
 transitions : trans (trans)* ;
             
 

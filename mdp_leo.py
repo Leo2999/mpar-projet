@@ -27,7 +27,7 @@ class gramPrintListener(gramListener):
         weights = [int(str(x)) for x in ctx.INT()]
 
         for i in range(len(ids)):
-            self.model.transitions_with_actions.append({'from': dep, 'action': act, 'to': ids[i], 'weight': weights[i]})
+            self.model.action_transitions.append({'from': dep, 'action': act, 'to': ids[i], 'weight': weights[i]})
 
         print("Transition from %s with action %s and targets %s with weights %s" % (dep, act, ids, weights))
 
@@ -50,15 +50,16 @@ def main():
     stream = CommonTokenStream(lexer)
     parser = gramParser(stream)
     tree = parser.program()
-    model = TemporaryModel()
-    printer = gramPrintListener(model)
+    temp_model = TemporaryModel()
+    printer = gramPrintListener(temp_model)
     walker = ParseTreeWalker()
     walker.walk(printer, tree)
 
-    print(model.states)
-    print(model.actions)
-    print(model.transitions)
-    print(model.transitions_with_actions)
+    model = temp_model.generate_model()
+
+    model.simulation_init()
+    for _ in range(10):
+        model.simulation_step()
 
 if __name__ == '__main__':
     main()
