@@ -52,15 +52,10 @@ class MarkovGraph:
         f.attr('node', shape='circle')
         for state in self.model.states:
             f.node(state)
-
-        for i in range(len(self.model.transitions_with_actions)):
-            f.edge(
-                self.model.transitions_with_actions[i]["from"],
-                self.model.transitions_with_actions[i]["to"],
-                label=f'{self.model.transitions_with_actions[i]["action"]} ({self.model.transitions_with_actions[i]["weight"]})'
-            )
-    #creare un nodo intermedio per fare la biforcazione
         
+        for transition in self.model.transitions:
+            f.edge(transition['from'], transition['to'], label=str(transition['weight']))
+    
         f.view()
 
 def main():
@@ -75,12 +70,12 @@ def main():
 
     model = temp_model.generate_model()
 
+    markov_graph = MarkovGraph(model)
+    markov_graph.plot()
+
     model.simulation_init()
     for _ in range(10):
         model.simulation_step()
-
-    prova = MarkovGraph(model)
-    prova.plot()
 
 if __name__ == '__main__':
     main()
