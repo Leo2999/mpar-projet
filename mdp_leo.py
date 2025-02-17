@@ -5,6 +5,7 @@ from gramParser import gramParser
 import sys
 from graphviz import Digraph
 from models import TemporaryModel
+from models import MarkovChain
 
         
 class gramPrintListener(gramListener):
@@ -57,6 +58,33 @@ class MarkovGraph:
             f.edge(transition['from'], transition['to'], label=str(transition['weight']))
     
         f.view()
+    
+    def plot_with_path(self):
+        
+        f = Digraph('MarkovPath', filename='MarkovPath.gv')
+        f.attr(rankdir='LR', size='8,5')
+
+        f.attr('node', shape='circle')
+        for state in self.model.states:
+            f.node(state)
+
+        for transition in self.model.transitions:
+            if (transition['from'], transition['to']) in self.path_edges:
+                f.edge(transition['from'], transition['to'], label=str(transition['weight']), color="red", penwidth="2.5")
+            else:
+                f.edge(transition['from'], transition['to'], label=str(transition['weight']), color="black")
+
+        f.view()
+
+    def simulate_and_track(self, steps):
+
+        self.model.simulation_init()
+        for _ in range(steps):
+            previous_state = self.model.actual_state
+            next_state = self.model.simulation_step()
+            self.path_edges.append((previous_state, next_state))  
+            print(f'{previous_state} -> {next_state}')  
+
 
 def main():
     lexer = gramLexer(StdinStream())
@@ -69,13 +97,12 @@ def main():
     walker.walk(printer, tree)
 
     model = temp_model.generate_model()
-
     markov_graph = MarkovGraph(model)
+    
     markov_graph.plot()
 
-    model.simulation_init()
-    for _ in range(10):
-        model.simulation_step()
+    markov_graph.simulate_and_track()    
+    markov_graph.plot_with_path()
 
 if __name__ == '__main__':
     main()
