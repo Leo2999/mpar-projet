@@ -51,15 +51,17 @@ class MarkovChain:
         self.states = states
         self.transitions = transitions
         self.simulation_trace = simulation_trace
+        self.path = []
 
     def simulation_init(self):
         self.actual_state = self.states[0]
+        self.path = [self.actual_state]
 
         if self.simulation_trace:
             print(f'>>> Simulation initialized: initial state: {self.actual_state}')
 
     def simulation_step(self):
-        possible_states, probabilities = self.allowed_transistions(self.actual_state)
+        possible_states, probabilities = self.allowed_transitions(self.actual_state)
 
         if self.simulation_trace:
             self.print_allowed_transitions(possible_states, probabilities)
@@ -70,9 +72,11 @@ class MarkovChain:
             print(f'>>> Transition chosen: {self.actual_state}->{next_state}')
 
         self.actual_state = next_state
+        self.path.append(self.actual_state)
+
         return self.actual_state
 
-    def allowed_transistions(self, state):
+    def allowed_transitions(self, state):
         possible_states = []
         probabilities = []
         for transition in self.transitions:
