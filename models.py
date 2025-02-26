@@ -66,6 +66,7 @@ class MarkovChain:
         if self.simulation_trace:
             self.print_allowed_transitions(possible_states, probabilities)
 
+
         next_state = np.random.choice(possible_states, p=probabilities)
 
         if self.simulation_trace:
@@ -100,3 +101,77 @@ class MarkovDecisionProcess(MarkovChain):
         super().__init__(states, transitions)
         self.actions = actions
         self.action_transitions = action_transitions
+
+    def simulation_init(self):
+        super().simulation_init()
+        next_actions = self.verify_actions(self.actual_state)
+        return next_actions
+
+    def allowed_transitions(self, state, action):
+        possible_states = []
+        probabilities = []
+        for transition in self.action_transitions:
+            if transition['from'] == state and transition['action'] == action:
+                possible_states.append(transition['to'])
+                probabilities.append(transition['weight'])
+        
+        probabilities = np.array(probabilities)
+        probabilities = probabilities / np.sum(probabilities)
+
+        return possible_states, probabilities
+
+    def simulation_step(self, action):
+        if action is None:
+            possible_states, probabilities = super().allowed_transitions(self.actual_state)
+
+            if self.simulation_trace:
+                self.print_allowed_transitions(possible_states, probabilities)
+
+
+            next_state = np.random.choice(possible_states, p=probabilities)
+
+            if self.simulation_trace:
+                print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
+
+            self.actual_state = next_state
+            self.path.append(self.actual_state)
+
+            next_actions = self.verify_actions(self.actual_state)
+
+            if self.simulation_trace:
+                print(f'>>> Possible actions: ', end='')
+                for action in next_actions:
+                    print(f'{action} ', end='')
+                print()
+
+            return self.actual_state, next_actions
+        else:
+            if self.simulation_trace:
+                print(f'>>> Action performed: {action}')
+
+            possible_states, probabilities = self.allowed_transitions(self.actual_state, action)
+            
+            if self.simulation_trace:
+                super().print_allowed_transitions(possible_states, probabilities)
+
+            next_state = np.random.choice(possible_states, p=probabilities)
+
+            if self.simulation_trace:
+                print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
+
+            self.actual_state = next_state
+            self.path.append(self.actual_state)
+
+            next_actions = self.verify_actions(self.actual_state)
+
+            return self.actual_state, next_actions
+
+    
+
+    def verify_actions(self, state):
+        possible_actions = set()
+        for transition in self.action_transitions:
+            if transition['from'] == state:
+                possible_actions.add(transition['action'])
+
+        return possible_actions

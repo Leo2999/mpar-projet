@@ -2,9 +2,9 @@ from antlr4 import *
 from gramLexer import gramLexer
 from gramListener import gramListener
 from gramParser import gramParser
-import sys
+import numpy as np
 from graphviz import Digraph
-from models import TemporaryModel
+from models import TemporaryModel, MarkovChain, MarkovDecisionProcess
 
         
 class gramPrintListener(gramListener):
@@ -98,13 +98,20 @@ def main():
     walker.walk(printer, tree)
 
     model = temp_model.generate_model()
-    markov_graph = MarkovGraph(model) 
-    markov_graph.plot()
 
-    model.simulation_init()
-    for _ in range(10):
-        model.simulation_step()
-    markov_graph.plot_simulation()
+    if type(model) == MarkovChain:
+        model.simulation_init()
+        for _ in range(10):
+            model.simulation_step()
+    else:
+        actions = model.simulation_init()
+        for _ in range(10):
+            if len(actions) == 0:
+                _, actions = model.simulation_step(None)
+            else:
+                action = np.random.choice(list(actions))
+                _, actions = model.simulation_step(action)
+        
 
 if __name__ == '__main__':
     main()
