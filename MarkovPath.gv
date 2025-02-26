@@ -1,9 +1,9 @@
 digraph MarkovPath {
 	rankdir=LR size="8,5"
 	node [shape=circle]
+	S0
 	S1
 	S2
-	S0
 	S0 -> S1 [color=black]
 	S0 -> S2 [color=red penwidth=2.5]
 	S1 -> S0 [color=red penwidth=2.5]
