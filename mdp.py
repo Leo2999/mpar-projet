@@ -2,9 +2,11 @@ from antlr4 import *
 from gramLexer import gramLexer
 from gramListener import gramListener
 from gramParser import gramParser
-import sys
 from graphviz import Digraph
 from models import TemporaryModel
+from matplotlib import pyplot as plt
+import matplotlib.image as mpimg
+import time
 
         
 class gramPrintListener(gramListener):
@@ -44,49 +46,59 @@ class gramPrintListener(gramListener):
 class MarkovGraph:
     def __init__(self, model):
         self.model = model
+        self.visited = set()
+        self.edges_drawn = set()
+        self.fp = Digraph('MarkovPath', filename='MarkovPath')
+        self.fp.attr(rankdir='LR', size='8,5')
+        self.fp.attr('node', shape='circle')
+        plt.ion() 
+        self.fig, self.ax = plt.subplots()
 
     def plot(self):
         f = Digraph('Markov', filename='Markov.gv')
-        f.attr(rankdir='M', size='8,5')
-        
+        f.attr(rankdir='LR', size='8,5')
         f.attr('node', shape='circle')
+        
         for state in self.model.states:
             f.node(state)
         
         for transition in self.model.transitions:
             f.edge(transition['from'], transition['to'], label=str(transition['weight']))
-    
-        f.view()
+
+        f.render(format='png')
+        image = mpimg.imread('Markov.gv.png')
+        self.ax.clear()
+        self.ax.imshow(image)
+        self.ax.axis('off')
+        plt.draw()
 
     def plot_simulation(self):
-        f = Digraph('MarkovPath', filename='MarkovPath.gv')
-        f.attr(rankdir='LR', size='8,5')
+        current_state = str(self.model.actual_state)
 
-        f.attr('node', shape='circle')
+        if len(self.model.path) > 1:
+            previous_state = self.model.path[-2] 
+        else: 
+            None
+        
+        for state in self.visited:
+            self.fp.node(state, style='filled', fillcolor='white')
+        
+        if previous_state and (previous_state, current_state) not in self.edges_drawn:
+            self.fp.edge(previous_state, current_state, color='red')
+            self.edges_drawn.add((previous_state, current_state))
+        
+        self.fp.node(current_state, style='filled', fillcolor='yellow')
+        self.visited.add(current_state)
+        
+        self.fp.render(format='png')
+        image = mpimg.imread('MarkovPath.png')
+        self.ax.clear()
+        self.ax.imshow(image)
+        self.ax.axis('off')
+        plt.draw()
+        plt.pause(1) 
 
-        visited_states = set(self.model.path) 
-        for state in visited_states:
-            f.node(state)
-
-        path_edges = set()
-
-        for i in range(len(self.model.path) - 1):
-            from_state = self.model.path[i]
-            to_state = self.model.path[i + 1]
-            path_edges.add((from_state, to_state)) 
-
-        for transition in self.model.transitions:
-            from_state = transition['from']
-            to_state = transition['to']
-            edge = (from_state, to_state)
-
-            if edge in path_edges:
-                f.edge(from_state, to_state, color="red", penwidth="2.5")
-            else:
-                f.edge(from_state, to_state, color="black")
-
-        f.view()
-       
+        
 def main():
     lexer = gramLexer(StdinStream())
     stream = CommonTokenStream(lexer)
@@ -104,7 +116,8 @@ def main():
     model.simulation_init()
     for _ in range(10):
         model.simulation_step()
-    markov_graph.plot_simulation()
+        markov_graph.plot_simulation()
+        time.sleep(1)
 
 if __name__ == '__main__':
     main()

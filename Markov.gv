@@ -1,5 +1,5 @@
 digraph Markov {
-	rankdir=M size="8,5"
+	rankdir=LR size="8,5"
 	node [shape=circle]
 	S0
 	S1
