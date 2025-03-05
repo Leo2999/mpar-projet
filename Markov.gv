@@ -4,15 +4,10 @@ digraph Markov {
 	S0
 	S1
 	S2
-	S0 -> S1 [label=9]
-	S0 -> S2 [label=1]
-	S2 -> S2 [label=1]
-	S1_a_intermediate [color=black shape=point width=0.1]
-	S1 -> S1_a_intermediate [label=a arrowhead=none]
-	S1_a_intermediate -> S1 [label=2]
-	S1_a_intermediate -> S2 [label=8]
-	S1_b_intermediate [color=black shape=point width=0.1]
-	S1 -> S1_b_intermediate [label=b arrowhead=none]
-	S1_b_intermediate -> S2 [label=7]
-	S1_b_intermediate -> S1 [label=3]
+	S0 -> S1 [label=5]
+	S0 -> S2 [label=5]
+	S1 -> S0 [label=5]
+	S1 -> S2 [label=5]
+	S2 -> S2 [label=3]
+	S2 -> S1 [label=7]
 }

@@ -128,6 +128,8 @@ def main():
     walker.walk(printer, tree)
 
     model = temp_model.generate_model()
+    model.build_transition_matrix()
+
     markov_graph = MarkovGraph(model) 
     markov_graph.plot()
 

@@ -1,0 +1,3 @@
+States I, C, A, B;
+I -> 2:C + 1:A;
+I -> 5:B + 5:C;
