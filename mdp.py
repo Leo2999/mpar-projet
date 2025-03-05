@@ -2,9 +2,10 @@ from antlr4 import *
 from gramLexer import gramLexer
 from gramListener import gramListener
 from gramParser import gramParser
+import numpy as np
 from graphviz import Digraph
-from models import TemporaryModel
-from matplotlib import pyplot as plt
+from models import TemporaryModel, MarkovDecisionProcess
+from matplotlib import pyplot as plt    
 import matplotlib.image as mpimg
 import time
 
@@ -64,6 +65,25 @@ class MarkovGraph:
         
         for transition in self.model.transitions:
             f.edge(transition['from'], transition['to'], label=str(transition['weight']))
+        
+        if isinstance(self.model, MarkovDecisionProcess):
+            action_transitions = {}
+
+            for transition in self.model.action_transitions:
+                key = (transition['from'], transition['action'])  
+                if key not in action_transitions:
+                    action_transitions[key] = []
+                
+                action_transitions[key].append((transition['to'], transition['weight']))
+
+            for (state_from, action), transitions in action_transitions.items():
+                intermediate_node = f"{state_from}_{action}_intermediate"
+                f.node(intermediate_node, shape='point', width='0.1', color='black')
+                
+                f.edge(state_from, intermediate_node, arrowhead='none', label=action)
+
+                for to_state, weight in transitions:
+                    f.edge(intermediate_node, to_state, label=str(weight))
 
         f.render(format='png')
         image = mpimg.imread('Markov.gv.png')
@@ -89,7 +109,6 @@ class MarkovGraph:
         
         self.fp.node(current_state, style='filled', fillcolor='yellow')
         self.visited.add(current_state)
-        
         self.fp.render(format='png')
         image = mpimg.imread('MarkovPath.png')
         self.ax.clear()
@@ -97,8 +116,7 @@ class MarkovGraph:
         self.ax.axis('off')
         plt.draw()
         plt.pause(1) 
-
-        
+       
 def main():
     lexer = gramLexer(StdinStream())
     stream = CommonTokenStream(lexer)
@@ -113,12 +131,24 @@ def main():
     markov_graph = MarkovGraph(model) 
     markov_graph.plot()
 
-    model.simulation_init()
-    for _ in range(10):
-        model.simulation_step()
-        markov_graph.plot_simulation()
-        time.sleep(1)
+    if isinstance(model, MarkovDecisionProcess):
+            actions = model.simulation_init()
+            for _ in range(10):
+                if len(actions) == 0:
+                    _, actions = model.simulation_step(None)
+                    markov_graph.plot_simulation()
+                    time.sleep(1)
+                else:
+                    action = np.random.choice(list(actions))
+                    _, actions = model.simulation_step(action)
+                    markov_graph.plot_simulation()
+                    time.sleep(1)
+    else:
+        model.simulation_init()
+        for _ in range(10):
+            model.simulation_step()
+            markov_graph.plot_simulation()
+            time.sleep(1)
 
 if __name__ == '__main__':
     main()
-
