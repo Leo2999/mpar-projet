@@ -10,6 +10,8 @@ class TemporaryModel:
 
     # verify if some state doesn't have a leaving transition
     # if so, add a 100% transition to itself
+
+    # verify if all the transitions leaving a state are declared in the same line
     def verify_model(self):
         self.model_type = 'MDP' if len(self.action_transitions) > 0 else 'MC'
 
@@ -50,32 +52,87 @@ class MarkovChain:
     def __init__(self, states, transitions, simulation_trace=True):
         self.states = states
         self.transitions = transitions
-        self.simulation_trace = simulation_trace
         self.path = []
+
+
+    def build_transition_matrix(self):
+        self.transition_matrix = []
+
+        for _ in range(len(self.states)):
+            matrix_line = []
+            for _ in range(len(self.states)):
+                matrix_line.append(0)
+            self.transition_matrix.append(matrix_line)
+
+        for state in self.states:
+            possible_states, probabilities = self.allowed_transitions(state)
+
+            for possible_state, prob in zip(possible_states, probabilities):
+                self.transition_matrix[self.states.index(state)][self.states.index(possible_state)] = prob
+
 
     def simulation_init(self):
         self.actual_state = self.states[0]
         self.path = [self.actual_state]
 
-        if self.simulation_trace:
-            print(f'>>> Simulation initialized: initial state: {self.actual_state}')
+        print(f'>>> Simulation initialized: initial state: {self.actual_state}')
 
     def simulation_step(self):
         possible_states, probabilities = self.allowed_transitions(self.actual_state)
 
-        if self.simulation_trace:
-            self.print_allowed_transitions(possible_states, probabilities)
-
+        self.print_allowed_transitions(possible_states, probabilities)
 
         next_state = np.random.choice(possible_states, p=probabilities)
 
-        if self.simulation_trace:
-            print(f'>>> Transition chosen: {self.actual_state}->{next_state}')
+        print(f'>>> Transition chosen: {self.actual_state}->{next_state}')
 
         self.actual_state = next_state
         self.path.append(self.actual_state)
 
         return self.actual_state
+
+
+    def verif_next(self, from_state, next_state):
+        possible_states, probabilities = self.allowed_transitions(from_state)
+
+        print(f'{possible_states=}')
+        print(f'{probabilities=}')
+
+        next_prob = 0
+        for state, prob in zip(possible_states, probabilities):
+            if state == next_state:
+                next_prob += prob
+
+        return prob
+    
+    def verif_until(self, dest_state):
+        A = []
+        b = []
+        for i in range(len(self.transition_matrix)):
+            A_line = []
+            if self.states[i] != dest_state:
+                for j in range(len(self.transition_matrix[0])):
+                    if self.states[j] != dest_state:
+                        A_line.append(self.transition_matrix[i][j])
+                    else:
+                        b.append(self.transition_matrix[i][j])
+                A.append(A_line)
+
+        for i in range(len(A)):
+            print(A[i])
+
+        print(b)
+
+        A = np.array(A)
+        b = np.array(b)
+
+
+        y = np.linalg.solve(np.identity(A.shape[0]) - A, b)
+        return y
+
+        
+        
+    
 
     def allowed_transitions(self, state):
         possible_states = []
@@ -95,6 +152,7 @@ class MarkovChain:
         for i in range(len(possible_states)):
             print(f'{self.actual_state}->{possible_states[i]}: {probabilities[i]*100}%')
         print()
+
 
 class MarkovDecisionProcess(MarkovChain):
     def __init__(self, states, actions, transitions, action_transitions):
@@ -124,40 +182,33 @@ class MarkovDecisionProcess(MarkovChain):
         if action is None:
             possible_states, probabilities = super().allowed_transitions(self.actual_state)
 
-            if self.simulation_trace:
-                self.print_allowed_transitions(possible_states, probabilities)
-
+            self.print_allowed_transitions(possible_states, probabilities)
 
             next_state = np.random.choice(possible_states, p=probabilities)
 
-            if self.simulation_trace:
-                print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
+            print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
 
             self.actual_state = next_state
             self.path.append(self.actual_state)
 
             next_actions = self.verify_actions(self.actual_state)
 
-            if self.simulation_trace:
-                print(f'>>> Possible actions: ', end='')
-                for action in next_actions:
-                    print(f'{action} ', end='')
-                print()
+            print(f'>>> Possible actions: ', end='')
+            for action in next_actions:
+                print(f'{action} ', end='')
+            print()
 
             return self.actual_state, next_actions
         else:
-            if self.simulation_trace:
-                print(f'>>> Action performed: {action}')
+            print(f'>>> Action performed: {action}')
 
             possible_states, probabilities = self.allowed_transitions(self.actual_state, action)
             
-            if self.simulation_trace:
-                super().print_allowed_transitions(possible_states, probabilities)
+            super().print_allowed_transitions(possible_states, probabilities)
 
             next_state = np.random.choice(possible_states, p=probabilities)
 
-            if self.simulation_trace:
-                print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
+            print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
 
             self.actual_state = next_state
             self.path.append(self.actual_state)
