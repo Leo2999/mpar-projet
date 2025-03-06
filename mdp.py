@@ -8,6 +8,7 @@ from models import TemporaryModel, MarkovDecisionProcess
 from matplotlib import pyplot as plt    
 import matplotlib.image as mpimg
 import time
+import sys
 
         
 class gramPrintListener(gramListener):
@@ -17,11 +18,11 @@ class gramPrintListener(gramListener):
 
     def enterDefstates(self, ctx):
         self.model.states = [str(x) for x in ctx.ID()]
-        print("States: %s" % str(self.model.states))
+        # print("States: %s" % str(self.model.states))
 
     def enterDefactions(self, ctx):
         self.model.actions = str([str(x) for x in ctx.ID()])
-        print("Actions: %s" % str(self.model.actions))
+        # print("Actions: %s" % str(self.model.actions))
 
     def enterTransact(self, ctx):
         ids = [str(x) for x in ctx.ID()]
@@ -32,7 +33,7 @@ class gramPrintListener(gramListener):
         for i in range(len(ids)):
             self.model.action_transitions.append({'from': dep, 'action': act, 'to': ids[i], 'weight': weights[i]})
 
-        print("Transition from %s with action %s and targets %s with weights %s" % (dep, act, ids, weights))
+        # print("Transition from %s with action %s and targets %s with weights %s" % (dep, act, ids, weights))
 
     def enterTransnoact(self, ctx):
         ids = [str(x) for x in ctx.ID()]
@@ -42,7 +43,7 @@ class gramPrintListener(gramListener):
         for i in range(len(ids)):
             self.model.transitions.append({'from': dep, 'to': ids[i], 'weight': weights[i]})
 
-        print("Transition from %s with no action and targets %s with weights %s" % (dep, ids, weights))   
+        # print("Transition from %s with no action and targets %s with weights %s" % (dep, ids, weights))   
 
 class MarkovGraph:
     def __init__(self, model):
@@ -118,7 +119,8 @@ class MarkovGraph:
         plt.pause(1) 
        
 def main():
-    lexer = gramLexer(StdinStream())
+    filename = sys.argv[1]
+    lexer = gramLexer(FileStream(filename))
     stream = CommonTokenStream(lexer)
     parser = gramParser(stream)
     tree = parser.program()
@@ -128,29 +130,58 @@ def main():
     walker.walk(printer, tree)
 
     model = temp_model.generate_model()
-    model.build_transition_matrix()
 
-    markov_graph = MarkovGraph(model) 
-    markov_graph.plot()
+    print("""Options: 
+            1 - Simulate the model
+            2 - Verify the properties
+          """)
+    choice = int(input('What do you want to do? '))
 
-    if isinstance(model, MarkovDecisionProcess):
+    if choice == 1:
+        print('>>> Simulating model')
+
+        steps = int(input('How many steps do you want to simulate? '))
+
+        markov_graph = MarkovGraph(model) 
+        markov_graph.plot()
+
+        if isinstance(model, MarkovDecisionProcess):
             actions = model.simulation_init()
-            for _ in range(10):
-                if len(actions) == 0:
-                    _, actions = model.simulation_step(None)
-                    markov_graph.plot_simulation()
-                    time.sleep(1)
-                else:
-                    action = np.random.choice(list(actions))
-                    _, actions = model.simulation_step(action)
-                    markov_graph.plot_simulation()
-                    time.sleep(1)
+            for _ in range(steps):
+                action = np.random.choice(list(actions))
+                _, actions = model.simulation_step(action)
+                markov_graph.plot_simulation()
+                time.sleep(1)
+
+        else:
+            model.simulation_init()
+            for _ in range(steps):
+                model.simulation_step()
+                markov_graph.plot_simulation()
+                time.sleep(1)
+    
+    elif choice == 2:
+        property = input('Which properties do you want to verify? ')
+        print(""" Techniques:
+                1 - Linear system resolution
+                2 - Iterative resolution
+                3 - SMC resolution
+              """)
+        technique = int(input('Which technique do you want to use? '))
+
+        if technique == 1:
+            y = model.verify_property_linear_system(property)
+            print(f'Probability: {y}')
+
+        elif technique == 2:
+            print('Not implemented')
+
+        if technique == 3:
+            gama = model.verify_property_smc(property, 0.01, 0.01)
+            print(f'Probability: {gama}')
+    
     else:
-        model.simulation_init()
-        for _ in range(10):
-            model.simulation_step()
-            markov_graph.plot_simulation()
-            time.sleep(1)
+        print('>>> Error in the choice')
 
 if __name__ == '__main__':
     main()
