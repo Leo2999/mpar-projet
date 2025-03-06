@@ -130,10 +130,6 @@ class MarkovChain:
         y = np.linalg.solve(np.identity(A.shape[0]) - A, b)
         return y
 
-        
-        
-    
-
     def allowed_transitions(self, state):
         possible_states = []
         probabilities = []
@@ -216,8 +212,6 @@ class MarkovDecisionProcess(MarkovChain):
             next_actions = self.verify_actions(self.actual_state)
 
             return self.actual_state, next_actions
-
-    
 
     def verify_actions(self, state):
         possible_actions = set()
