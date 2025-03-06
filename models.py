@@ -11,9 +11,6 @@ class TemporaryModel:
 
     # verify if all the transitions leaving a state are declared in the same line
     def verify_model(self):
-        print(f'{self.transitions=}')
-        print(f'{self.action_transitions=}')
-
         self.model_type = 'MDP' if len(self.action_transitions) > 0 else 'MC'
 
         for transition in self.transitions:
@@ -31,10 +28,8 @@ class TemporaryModel:
             for transition in self.action_transitions:
                 action_states.add(transition["from"])
             
-            print(f'{action_states=}')
 
             for transition in self.transitions:
-                print(f'{transition=}')
                 if transition['from'] in action_states:
                     raise Exception(f'Error: transitions with and without actions leaving state {transition["from"]}')
             
@@ -195,18 +190,34 @@ class MarkovChain:
 
 class MarkovDecisionProcess(MarkovChain):
     def __init__(self, states, actions, transitions, action_transitions):
-        super().__init__(states, transitions)
         self.actions = actions
         self.action_transitions = action_transitions
+        super().__init__(states, transitions)
 
     def simulation_init(self):
         super().simulation_init()
         next_actions = self.possible_actions(self.actual_state)
         return next_actions
     
-    # TODO
+
     def build_transition_matrix(self):
-        pass
+        actions_by_state = np.array([])
+        for state in self.states:
+            actions = self.possible_actions(state)
+            actions_by_state = np.append(actions_by_state, actions)
+
+        transition_matrix = np.empty((0, len(self.states)))
+        for state_index, actions in enumerate(actions_by_state):
+            for action in actions:
+                transition_matrix_line = np.zeros(len(self.states))
+                possible_states, probabilities = self.allowed_transitions(self.states[state_index], action)
+                for possible_state, prob in zip(possible_states, probabilities):
+                    transition_matrix_line[self.states.index(possible_state)] = prob
+                transition_matrix = np.vstack((transition_matrix, transition_matrix_line))
+        
+        self.transition_matrix = transition_matrix
+        self.actions_by_state = actions_by_state
+                
 
     def allowed_transitions(self, state, action):
         possible_states = []
