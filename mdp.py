@@ -9,9 +9,7 @@ from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 import time
 
-        
 class gramPrintListener(gramListener):
-
     def __init__(self, model):
         self.model = model
 
@@ -20,7 +18,7 @@ class gramPrintListener(gramListener):
         print("States: %s" % str(self.model.states))
 
     def enterDefactions(self, ctx):
-        self.model.actions = str([str(x) for x in ctx.ID()])
+        self.model.actions = [str(x) for x in ctx.ID()]
         print("Actions: %s" % str(self.model.actions))
 
     def enterTransact(self, ctx):
@@ -47,34 +45,30 @@ class gramPrintListener(gramListener):
 class MarkovGraph:
     def __init__(self, model):
         self.model = model
-        self.current_edge = None
-        self.fp = Digraph('MarkovPath', filename='MarkovPath')
-        self.fp.attr(rankdir='LR', size='8,5')
-        self.fp.attr('node', shape='circle')
         plt.ion()
         self.fig, self.ax = plt.subplots()
         self.plot_complete_graph()
 
-    def plot_complete_graph(self):
-        self.fp.clear()
+    def plot_complete_graph(self, highlight_edge=None, highlight_node=None):
+        self.fp = Digraph('MarkovPath', filename='MarkovPath')
         self.fp.attr(rankdir='LR', size='8,5')
         self.fp.attr('node', shape='circle')
 
-        # Creiamo i nodi per tutti gli stati
         for state in self.model.states:
-            self.fp.node(state, style='filled', fillcolor='white')
+            fill = 'yellow' if state == highlight_node else 'white'
+            self.fp.node(state, style='filled', fillcolor=fill)
 
-        # Creiamo le transizioni senza azione
         for transition in self.model.transitions:
-            self.fp.edge(transition['from'], transition['to'], label=str(transition['weight']), color='black')
+            color = 'red' if highlight_edge and transition['from'] == highlight_edge[0] and transition['to'] == highlight_edge[1] else 'black'
+            self.fp.edge(transition['from'], transition['to'], label=str(transition['weight']), color=color)
 
-        # Se il modello è un MarkovDecisionProcess, creiamo anche le transizioni con azioni
-        if isinstance(self.model, MarkovDecisionProcess):
+        if hasattr(self.model, 'action_transitions') and self.model.action_transitions:
             for transition in self.model.action_transitions:
-                self.fp.edge(transition['from'], transition['to'], label=f"{transition['action']} ({transition['weight']})", color='black')
+                color = 'red' if highlight_edge and transition['from'] == highlight_edge[0] and transition['to'] == highlight_edge[1] else 'black'
+                label = f"{transition['action']} ({transition['weight']})"
+                self.fp.edge(transition['from'], transition['to'], label=label, color=color)
 
-        # Renderizziamo il grafico
-        self.fp.render(format='png')
+        self.fp.render(format='png', cleanup=True)
         self.update_plot()
 
     def update_plot(self):
@@ -83,55 +77,17 @@ class MarkovGraph:
         self.ax.imshow(image)
         self.ax.axis('off')
         plt.draw()
-        plt.pause(1)
+        plt.pause(0.5)
 
     def plot_simulation(self):
         current_state = str(self.model.actual_state)
+        previous_state = self.model.path[-2] if len(self.model.path) > 1 else None
 
-        if len(self.model.path) > 1:
-            previous_state = self.model.path[-2]
-        else:
-            previous_state = None
+        highlight_edge = (previous_state, current_state) if previous_state else None
 
-        self.fp.clear()  # Svuotiamo il grafico corrente
-        self.plot_complete_graph()  # Ripristiniamo il grafico di base
+        self.plot_complete_graph(highlight_edge=highlight_edge, highlight_node=current_state)
 
-        # Evidenziamo lo stato corrente
-        self.fp.node(current_state, style='filled', fillcolor='yellow')
 
-        # Se esiste una transizione precedente, la aggiungiamo
-        if self.current_edge:
-            self.fp.edge(self.current_edge[0], self.current_edge[1], color='black', label=str(self.get_transition_weight(self.current_edge[0], self.current_edge[1])))
-            self.current_edge = None
-
-        # Aggiungiamo solo l'ultima transizione in rosso, se esiste
-        if previous_state:
-            transition_found = False
-            for transition in self.model.transitions:
-                if transition['from'] == previous_state and transition['to'] == current_state:
-                    # Prima rimuoviamo la freccia nera, se esiste
-                    self.fp.edge(transition['from'], transition['to'], color='white')  
-                    
-                    # Ora disegniamo la transizione in rosso
-                    self.fp.edge(previous_state, current_state, color='red', label=str(transition['weight']))
-                    self.current_edge = (previous_state, current_state)
-                    transition_found = True
-                    break
-            
-            # Se non è stata trovata una transizione tra previous_state e current_state, non tracciarla
-            if not transition_found:
-                print(f"Nessuna transizione trovata tra {previous_state} e {current_state}.")
-        
-        # Renderizziamo il grafico con la transizione rossa
-        self.fp.render(format='png')
-        self.update_plot()
-
-    def get_transition_weight(self, from_state, to_state):
-        for transition in self.model.transitions:
-            if transition['from'] == from_state and transition['to'] == to_state:
-                return transition['weight']
-        return ''
-       
 def main():
     lexer = gramLexer(StdinStream())
     stream = CommonTokenStream(lexer)
@@ -149,17 +105,17 @@ def main():
     markov_graph.plot_complete_graph()
 
     if isinstance(model, MarkovDecisionProcess):
-            actions = model.simulation_init()
-            for _ in range(10):
-                if len(actions) == 0:
-                    _, actions = model.simulation_step(None)
-                    markov_graph.plot_simulation()
-                    time.sleep(1)
-                else:
-                    action = np.random.choice(list(actions))
-                    _, actions = model.simulation_step(action)
-                    markov_graph.plot_simulation()
-                    time.sleep(1)
+        actions = model.simulation_init()
+        for _ in range(10):
+            if len(actions) == 0:
+                _, actions = model.simulation_step(None)
+                markov_graph.plot_simulation()
+                time.sleep(1)
+            else:
+                action = np.random.choice(list(actions))
+                _, actions = model.simulation_step(action)
+                markov_graph.plot_simulation()
+                time.sleep(1)
     else:
         model.simulation_init()
         for _ in range(10):
