@@ -155,6 +155,8 @@ class MarkovDecisionProcess(MarkovChain):
         super().__init__(states, transitions)
         self.actions = actions
         self.action_transitions = action_transitions
+        self.last_action = None          
+        self.last_next_state = None      
 
     def simulation_init(self):
         super().simulation_init()
@@ -163,39 +165,54 @@ class MarkovDecisionProcess(MarkovChain):
 
     def allowed_transitions(self, state, action=None):
         if action is None:
+            
             return super().allowed_transitions(state)
+        
         else:
+        
             possible_states = []
             probabilities = []
+        
             for transition in self.action_transitions:
+        
                 if transition['from'] == state and transition['action'] == action:
                     possible_states.append(transition['to'])
                     probabilities.append(transition['weight'])
+        
             probabilities = np.array(probabilities)
             probabilities = probabilities / np.sum(probabilities)
+        
             return possible_states, probabilities
 
     def simulation_step(self, action):
+        
         if action is None:
+        
             possible_states, probabilities = super().allowed_transitions(self.actual_state)
             self.print_allowed_transitions(possible_states, probabilities)
             next_state = np.random.choice(possible_states, p=probabilities)
             print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
             self.actual_state = next_state
             self.path.append(self.actual_state)
+            self.last_action = None
+            self.last_next_state = next_state
             next_actions = self.verify_actions(self.actual_state)
-            # In questo ramo last_action rimane invariato (o potrebbe essere impostato a None)
+        
             return self.actual_state, next_actions
+        
         else:
+        
             print(f'>>> Action performed: {action}')
-            self.last_action = action  # IMPOSTA CORRETTAMENTE last_action
+            self.last_action = action  
             possible_states, probabilities = self.allowed_transitions(self.actual_state, action)
             self.print_allowed_transitions(possible_states, probabilities)
             next_state = np.random.choice(possible_states, p=probabilities)
             print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
             self.actual_state = next_state
             self.path.append(self.actual_state)
+            self.last_next_state = next_state
             next_actions = self.verify_actions(self.actual_state)
+        
             return self.actual_state, next_actions
 
     def verify_actions(self, state):

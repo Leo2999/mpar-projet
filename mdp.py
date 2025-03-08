@@ -18,7 +18,6 @@ class gramPrintListener(gramListener):
         print("States: %s" % str(self.model.states))
 
     def enterDefactions(self, ctx):
-        # Salva le azioni come lista
         self.model.actions = [str(x) for x in ctx.ID()]
         print("Actions: %s" % str(self.model.actions))
 
@@ -44,52 +43,49 @@ class MarkovGraph:
         self.model = model
         plt.ion()
         self.fig, self.ax = plt.subplots()
-        
-    def plot_complete_graph(self, highlight_edge=None, highlight_intermediate=None, highlight_node=None):
-        # Ricrea il grafo da zero
+
+    def plot_complete_graph(self, highlight_intermediate=None, highlight_node=None, 
+                            highlight_edge=None, highlight_next_state=None):
+
         self.fp = Digraph('MarkovPath', filename='MarkovPath')
         self.fp.attr(rankdir='LR', size='8,5')
-        
+
+        self.fp.attr('node', shape='circle')
+        for state in self.model.states:
+            fillcolor = 'yellow' if state == highlight_node else 'white'
+            self.fp.node(state, style='filled', fillcolor=fillcolor)
+
+        for t in self.model.transitions:
+            edge_color = 'black'
+            if highlight_edge and (t['from'] == highlight_edge[0]) and (t['to'] == highlight_edge[1]):
+                edge_color = 'red'
+            label_str = f"({t['weight']})"
+            self.fp.edge(t['from'], t['to'], label=label_str, color=edge_color, fontcolor=edge_color)
+
         if hasattr(self.model, 'action_transitions') and self.model.action_transitions:
-            # Modalità MDP: utilizza nodi intermedi per le transizioni con azione
-            self.fp.attr('node', shape='circle')
-            for state in self.model.states:
-                fill = 'yellow' if state == highlight_node else 'white'
-                self.fp.node(state, style='filled', fillcolor=fill)
-            
-            # Raggruppa le transizioni per coppia (stato di partenza, azione)
             action_groups = {}
-            for transition in self.model.action_transitions:
-                key = (transition['from'], transition['action'])
+            for t in self.model.action_transitions:
+                key = (t['from'], t['action'])
                 if key not in action_groups:
                     action_groups[key] = []
-                action_groups[key].append(transition)
-            
-            # Per ogni gruppo crea un nodo intermedio e disegna le frecce
+                action_groups[key].append(t)
+
             for (from_state, action), transitions in action_groups.items():
-                intermediate_node = f"{from_state}_{action}_intermediate"
-                edge_color = 'red' if highlight_intermediate == intermediate_node else 'black'
-                # Nodo intermedio (lo evidenzia se necessario)
-                self.fp.node(intermediate_node, shape='point', width='0.1', color=edge_color)
-                # Arco dal nodo di partenza al nodo intermedio con etichetta azione
-                self.fp.edge(from_state, intermediate_node, arrowhead='none',
-                             label=action, color=edge_color, fontcolor=edge_color)
-                # Arco dal nodo intermedio agli stati di destinazione con etichetta peso
+                intermediate_node = f"{from_state}_{action}"
+
+                node_color = 'red' if highlight_intermediate == intermediate_node else 'black'
+                self.fp.node(intermediate_node, shape='point', width='0.1', color=node_color)
+
+                self.fp.edge(from_state, intermediate_node, label=action, arrowhead='none', color=node_color, fontcolor=node_color)
+
                 for t in transitions:
-                    self.fp.edge(intermediate_node, t['to'], label=str(t['weight']),
-                                 color=edge_color, fontcolor=edge_color)
-        else:
-            # Modalità MC: evidenzia lo stato corrente e, se presente, la transizione corrente (highlight_edge)
-            self.fp.attr('node', shape='circle')
-            for state in self.model.states:
-                fill = 'yellow' if state == highlight_node else 'white'
-                self.fp.node(state, style='filled', fillcolor=fill)
-            for transition in self.model.transitions:
-                # Se l'arco corrisponde a highlight_edge, lo coloriamo di rosso
-                edge_color = 'red' if highlight_edge and transition['from'] == highlight_edge[0] and transition['to'] == highlight_edge[1] else 'black'
-                self.fp.edge(transition['from'], transition['to'], label=str(transition['weight']),
-                             color=edge_color, fontcolor=edge_color)
-                
+                    edge_color = 'black'
+                    if (highlight_intermediate == intermediate_node) and (highlight_next_state == t['to']):
+                        edge_color = 'red'
+
+                    weight_str = f"({t['weight']})"
+                    self.fp.edge(intermediate_node, t['to'], label=weight_str, color=edge_color, fontcolor=edge_color)
+
         self.fp.render(format='png', cleanup=True)
         self.update_plot()
 
@@ -102,18 +98,36 @@ class MarkovGraph:
         plt.pause(0.5)
 
     def plot_simulation(self):
+        if len(self.model.path) == 1:
+            initial_state = self.model.path[0]
+            self.plot_complete_graph(highlight_node=initial_state)
+            return
+        
         current_state = str(self.model.actual_state)
         previous_state = self.model.path[-2] if len(self.model.path) > 1 else None
 
         if hasattr(self.model, 'action_transitions') and self.model.action_transitions:
-            # Modalità MDP: evidenzia il nodo intermedio relativo alla transizione corrente
             action = getattr(self.model, 'last_action', None)
+            next_state = getattr(self.model, 'last_next_state', None)
+            
             highlight_intermediate = None
-            if previous_state and action is not None:
-                highlight_intermediate = f"{previous_state}_{action}_intermediate"
-            self.plot_complete_graph(highlight_intermediate=highlight_intermediate, highlight_node=current_state)
+            highlight_next_state = None
+            
+            if previous_state and action is not None and next_state is not None:
+                highlight_intermediate = f"{previous_state}_{action}"
+                highlight_next_state = next_state
+
+            highlight_edge = None
+            if action is None and previous_state:
+                highlight_edge = (previous_state, current_state)
+
+            self.plot_complete_graph(
+                highlight_intermediate=highlight_intermediate,
+                highlight_node=current_state,
+                highlight_edge=highlight_edge,
+                highlight_next_state=highlight_next_state
+            )
         else:
-            # Modalità MC: evidenzia l'arco dalla transizione (stato precedente -> stato corrente)
             highlight_edge = (previous_state, current_state) if previous_state else None
             self.plot_complete_graph(highlight_edge=highlight_edge, highlight_node=current_state)
 
@@ -128,10 +142,8 @@ def main():
     walker = ParseTreeWalker()
     walker.walk(printer, tree)
 
-    # Genera il modello; se è MDP, si usa la versione modificata
     model = temp_model.generate_model()
     if temp_model.verify_model() == 'MDP':
-        # Sostituisci il modello con la versione modificata per memorizzare last_action
         model.__class__ = MarkovDecisionProcess
 
     model.build_transition_matrix()
@@ -141,6 +153,13 @@ def main():
 
     if hasattr(model, 'action_transitions') and model.action_transitions:
         actions = model.simulation_init()
+    else:
+        model.simulation_init()
+
+    markov_graph.plot_simulation()   
+    time.sleep(1) 
+    
+    if hasattr(model, 'action_transitions') and model.action_transitions:
         for _ in range(10):
             if len(actions) == 0:
                 _, actions = model.simulation_step(None)
@@ -152,7 +171,6 @@ def main():
                 markov_graph.plot_simulation()
                 time.sleep(1)
     else:
-        model.simulation_init()
         for _ in range(10):
             model.simulation_step()
             markov_graph.plot_simulation()
