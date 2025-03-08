@@ -1,9 +1,9 @@
 digraph Markov {
 	rankdir=LR size="8,5"
 	node [shape=circle]
-	S0
-	S1
-	S2
+	S0 [xlabel=S0]
+	S1 [xlabel=S1]
+	S2 [xlabel=S2]
 	S0 -> S1 [label=5]
 	S0 -> S2 [label=5]
 	S1 -> S0 [label=5]
