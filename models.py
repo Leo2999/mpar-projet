@@ -178,40 +178,24 @@ class MarkovDecisionProcess(MarkovChain):
     def simulation_step(self, action):
         if action is None:
             possible_states, probabilities = super().allowed_transitions(self.actual_state)
-
             self.print_allowed_transitions(possible_states, probabilities)
-
             next_state = np.random.choice(possible_states, p=probabilities)
-
             print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
-
             self.actual_state = next_state
             self.path.append(self.actual_state)
-
             next_actions = self.verify_actions(self.actual_state)
-
-            print(f'>>> Possible actions: ', end='')
-            for action in next_actions:
-                print(f'{action} ', end='')
-            print()
-
+            # In questo ramo last_action rimane invariato (o potrebbe essere impostato a None)
             return self.actual_state, next_actions
         else:
             print(f'>>> Action performed: {action}')
-
+            self.last_action = action  # IMPOSTA CORRETTAMENTE last_action
             possible_states, probabilities = self.allowed_transitions(self.actual_state, action)
-            
-            super().print_allowed_transitions(possible_states, probabilities)
-
+            self.print_allowed_transitions(possible_states, probabilities)
             next_state = np.random.choice(possible_states, p=probabilities)
-
             print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
-
             self.actual_state = next_state
             self.path.append(self.actual_state)
-
             next_actions = self.verify_actions(self.actual_state)
-
             return self.actual_state, next_actions
 
     def verify_actions(self, state):
