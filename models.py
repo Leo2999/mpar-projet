@@ -161,18 +161,19 @@ class MarkovDecisionProcess(MarkovChain):
         next_actions = self.verify_actions(self.actual_state)
         return next_actions
 
-    def allowed_transitions(self, state, action):
-        possible_states = []
-        probabilities = []
-        for transition in self.action_transitions:
-            if transition['from'] == state and transition['action'] == action:
-                possible_states.append(transition['to'])
-                probabilities.append(transition['weight'])
-        
-        probabilities = np.array(probabilities)
-        probabilities = probabilities / np.sum(probabilities)
-
-        return possible_states, probabilities
+    def allowed_transitions(self, state, action=None):
+        if action is None:
+            return super().allowed_transitions(state)
+        else:
+            possible_states = []
+            probabilities = []
+            for transition in self.action_transitions:
+                if transition['from'] == state and transition['action'] == action:
+                    possible_states.append(transition['to'])
+                    probabilities.append(transition['weight'])
+            probabilities = np.array(probabilities)
+            probabilities = probabilities / np.sum(probabilities)
+            return possible_states, probabilities
 
     def simulation_step(self, action):
         if action is None:
