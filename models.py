@@ -17,7 +17,7 @@ class TemporaryModel:
 
         for transition in self.transitions:
             if transition['from'] not in self.states:
-                raise Exception(f'Error: undeclared state: {transition["from"]}') 
+                raise Exception(f'Error: undeclared state: {transition["from"]}')
             if transition['to'] not in self.states:
                 raise Exception(f'Error: undeclared state: {transition["to"]}')
             
@@ -33,6 +33,28 @@ class TemporaryModel:
             for transition in self.transitions:
                 if transition['from'] in action_states:
                     raise Exception(f'Error: transitions with and without actions leaving state {transition["from"]}')
+            
+            for t in self.transitions:
+                self.action_transitions.append({'from': t['from'],'to': t['to'],'weight': t['weight'],'action': 'no_action'})
+            
+            for state in self.states:
+                there_is_transition = False
+                for t in self.transitions:
+                    if t['from'] == state:
+                        there_is_transition = True
+                        break
+                if not there_is_transition and state not in action_states:
+                    self.transitions.append({'from': state, 'to': state, 'weight': 1})
+        
+        else:
+            for state in self.states:
+                there_is_transition = False
+                for t in self.transitions:
+                    if t['from'] == state:
+                        there_is_transition = True
+                        break
+                if not there_is_transition:
+                    self.transitions.append({'from': state, 'to': state, 'weight': 1})
                 
         return self.model_type
             
@@ -53,82 +75,67 @@ class MarkovChain:
         self.states = states
         self.transitions = transitions
         self.path = []
+        self.simulation_trace = simulation_trace
+        self.build_transition_matrix()
 
+    def trace(self, message=''):
+        if self.simulation_trace:
+            print(message)
 
     def build_transition_matrix(self):
         self.transition_matrix = []
-
         for _ in range(len(self.states)):
-            matrix_line = []
-            for _ in range(len(self.states)):
-                matrix_line.append(0)
+            matrix_line = [0] * len(self.states)
             self.transition_matrix.append(matrix_line)
-
         for state in self.states:
             possible_states, probabilities = self.allowed_transitions(state)
-
             for possible_state, prob in zip(possible_states, probabilities):
                 self.transition_matrix[self.states.index(state)][self.states.index(possible_state)] = prob
-
 
     def simulation_init(self):
         self.actual_state = self.states[0]
         self.path = [self.actual_state]
-
-        print(f'>>> Simulation initialized: initial state: {self.actual_state}')
+        self.trace(f'>>> Simulation initialized: initial state: {self.actual_state}')
 
     def simulation_step(self):
         possible_states, probabilities = self.allowed_transitions(self.actual_state)
-
         self.print_allowed_transitions(possible_states, probabilities)
-
         next_state = np.random.choice(possible_states, p=probabilities)
-
-        print(f'>>> Transition chosen: {self.actual_state}->{next_state}')
-
+        self.trace(f'>>> Transition chosen: {self.actual_state} -> {next_state}')
         self.actual_state = next_state
         self.path.append(self.actual_state)
-
         return self.actual_state
 
-
-    def verif_next(self, from_state, next_state):
-        possible_states, probabilities = self.allowed_transitions(from_state)
-
-        print(f'{possible_states=}')
-        print(f'{probabilities=}')
-
-        next_prob = 0
-        for state, prob in zip(possible_states, probabilities):
-            if state == next_state:
-                next_prob += prob
-
-        return prob
-    
-    def verif_until(self, dest_state):
-        A = []
-        b = []
-        for i in range(len(self.transition_matrix)):
-            A_line = []
-            if self.states[i] != dest_state:
-                for j in range(len(self.transition_matrix[0])):
-                    if self.states[j] != dest_state:
-                        A_line.append(self.transition_matrix[i][j])
-                    else:
-                        b.append(self.transition_matrix[i][j])
-                A.append(A_line)
-
-        for i in range(len(A)):
-            print(A[i])
-
-        print(b)
-
-        A = np.array(A)
-        b = np.array(b)
-
-
+    def verify_property_linear_system(self, property):
+        transition_matrix = np.array(self.transition_matrix)
+        property_index = self.states.index(property)
+        indices_to_delete = [property_index]
+        for i in range(transition_matrix.shape[0]):
+            if i != property_index and transition_matrix[i, i] == 1:
+                indices_to_delete.append(i)
+        A_temp = np.delete(transition_matrix, indices_to_delete, axis=0)
+        A = np.delete(A_temp, indices_to_delete, axis=1)
+        b = np.delete(transition_matrix[:, property_index], indices_to_delete)
         y = np.linalg.solve(np.identity(A.shape[0]) - A, b)
-        return y
+        return y[0]
+
+    def verify_property_smc(self, property, epsilon, delta, number_steps=20):
+        N = np.ceil( (np.log(2) - np.log(delta)) / (2*epsilon)**2 )
+        count = 0
+        self.simulation_trace = False
+        for k in range(int(N)):
+            is_property_verified = False
+            self.simulation_init()
+            i = 0
+            while not is_property_verified and i < number_steps:
+                is_property_verified = (self.actual_state == property)
+                self.simulation_step()
+                i += 1
+            if is_property_verified:
+                count += 1
+        self.simulation_trace = True
+        gama = count / N
+        return gama
 
     def allowed_transitions(self, state):
         possible_states = []
@@ -137,88 +144,74 @@ class MarkovChain:
             if transition['from'] == state:
                 possible_states.append(transition['to'])
                 probabilities.append(transition['weight'])
-        
         probabilities = np.array(probabilities)
         probabilities = probabilities / np.sum(probabilities)
-
         return possible_states, probabilities
-    
-    def print_allowed_transitions(self, possible_states, probabilities):
-        print('>>> Possible Transitions')
-        for i in range(len(possible_states)):
-            print(f'{self.actual_state}->{possible_states[i]}: {probabilities[i]*100}%')
-        print()
 
+    def print_allowed_transitions(self, possible_states, probabilities):
+        self.trace('>>> Possible Transitions')
+        for i in range(len(possible_states)):
+            self.trace(f'{self.actual_state} -> {possible_states[i]}: {probabilities[i]*100}%')
+        self.trace()
 
 class MarkovDecisionProcess(MarkovChain):
     def __init__(self, states, actions, transitions, action_transitions):
-        super().__init__(states, transitions)
         self.actions = actions
         self.action_transitions = action_transitions
+        super().__init__(states, transitions)
         self.last_action = None          
         self.last_next_state = None      
 
     def simulation_init(self):
         super().simulation_init()
-        next_actions = self.verify_actions(self.actual_state)
+        next_actions = self.possible_actions(self.actual_state)
         return next_actions
 
-    def allowed_transitions(self, state, action=None):
-        if action is None:
-            
-            return super().allowed_transitions(state)
+    def build_transition_matrix(self):
+        state_action_pairs = []
+        for state in self.states:
+            actions = list(self.possible_actions(state))
+            for action in actions:
+                state_action_pairs.append((state, action))
         
-        else:
-        
-            possible_states = []
-            probabilities = []
-        
-            for transition in self.action_transitions:
-        
-                if transition['from'] == state and transition['action'] == action:
-                    possible_states.append(transition['to'])
-                    probabilities.append(transition['weight'])
-        
-            probabilities = np.array(probabilities)
-            probabilities = probabilities / np.sum(probabilities)
-        
-            return possible_states, probabilities
+        transition_matrix = np.empty((0, len(self.states)))
+        for (state, action) in state_action_pairs:
+            transition_matrix_line = np.zeros(len(self.states))
+            possible_states, probabilities = self.allowed_transitions(state, action)
+            for possible_state, prob in zip(possible_states, probabilities):
+                transition_matrix_line[self.states.index(possible_state)] = prob
+            transition_matrix = np.vstack((transition_matrix, transition_matrix_line))
+    
+        self.transition_matrix = transition_matrix
+        self.actions_by_state = state_action_pairs
+
+    def allowed_transitions(self, state, action):
+        possible_states = []
+        probabilities = []
+        for transition in self.action_transitions:
+            if transition['from'] == state and transition['action'] == action:
+                possible_states.append(transition['to'])
+                probabilities.append(transition['weight'])
+        probabilities = np.array(probabilities)
+        probabilities = probabilities / np.sum(probabilities)
+        return possible_states, probabilities
 
     def simulation_step(self, action):
-        
-        if action is None:
-        
-            possible_states, probabilities = super().allowed_transitions(self.actual_state)
-            self.print_allowed_transitions(possible_states, probabilities)
-            next_state = np.random.choice(possible_states, p=probabilities)
-            print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
-            self.actual_state = next_state
-            self.path.append(self.actual_state)
-            self.last_action = None
-            self.last_next_state = next_state
-            next_actions = self.verify_actions(self.actual_state)
-        
-            return self.actual_state, next_actions
-        
-        else:
-        
-            print(f'>>> Action performed: {action}')
-            self.last_action = action  
-            possible_states, probabilities = self.allowed_transitions(self.actual_state, action)
-            self.print_allowed_transitions(possible_states, probabilities)
-            next_state = np.random.choice(possible_states, p=probabilities)
-            print(f'>>> Transition chosen: {self.actual_state}->{next_state}\n')
-            self.actual_state = next_state
-            self.path.append(self.actual_state)
-            self.last_next_state = next_state
-            next_actions = self.verify_actions(self.actual_state)
-        
-            return self.actual_state, next_actions
+        self.trace(f'>>> Action performed: {action}')
+        possible_states, probabilities = self.allowed_transitions(self.actual_state, action)
+        self.print_allowed_transitions(possible_states, probabilities)
+        next_state = np.random.choice(possible_states, p=probabilities)
+        self.trace(f'>>> Transition chosen: {self.actual_state} -> {next_state}\n')
+        self.actual_state = next_state
+        self.path.append(self.actual_state)
+        self.last_action = action
+        self.last_next_state = next_state
+        next_actions = self.possible_actions(self.actual_state)
+        return self.actual_state, next_actions
 
-    def verify_actions(self, state):
+    def possible_actions(self, state):
         possible_actions = set()
         for transition in self.action_transitions:
             if transition['from'] == state:
                 possible_actions.add(transition['action'])
-
         return possible_actions
