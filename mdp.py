@@ -204,18 +204,22 @@ def main():
                 markov_graph.plot_simulation()
                 time.sleep(1)
     elif choice == 2:
-        property = input('Which properties do you want to verify? ')
+        property = input('Which properties do you want to verify? (indicate the state)')
         print(""" Techniques:
                 1 - Linear system resolution
                 2 - Iterative resolution
                 3 - SMC resolution
               """)
-        technique = int(input('Which technique do you want to use? '))
+        technique = int(input('Which technique do you want to use (1,2 or 3)? '))
+        while technique not in [1, 2, 3]:
+                print("Invalid technique. Please choose 1,2 or 3.")
+                technique = int(input('What do you want to do (1,2 or 3)? '))
         if technique == 1:
             y = model.verify_property_linear_system(property)
             print(f'Probability: {y}')
         elif technique == 2:
-            print('Not implemented')
+            y = model.verify_property_iterative(property)
+            print(f'Probability: {y}')
         elif technique == 3:
             gama = model.verify_property_smc(property, 0.01, 0.01)
             print(f'Probability: {gama}')

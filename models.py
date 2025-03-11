@@ -119,8 +119,28 @@ class MarkovChain:
         y = np.linalg.solve(np.identity(A.shape[0]) - A, b)
         return y[0]
     
-    def verify_property_iterative(self, property, epsilon=0.01):
-        pass
+    def verify_property_iterative(self, property, epsilon=1e-4, max_iterations=10000):
+        if property not in self.states:
+            raise Exception(f"Error: stato '{property}' non dichiarato")
+        target_index = self.states.index(property)
+        n = len(self.states)
+        if not hasattr(self, 'transition_matrix'):
+            self.build_transition_matrix()
+        P = np.array(self.transition_matrix)
+        p = np.zeros(n)
+        p[target_index] = 1.0
+        for it in range(max_iterations):
+            p_new = np.copy(p)
+            for i in range(n):
+                if i == target_index or np.isclose(P[i, i], 1.0):
+                    continue
+                p_new[i] = np.dot(P[i, :], p)
+            p_new[target_index] = 1.0
+            if np.max(np.abs(p_new - p)) < epsilon:
+                p = p_new
+                break
+            p = p_new
+        return p[0]
 
     def verify_property_smc(self, property, epsilon, delta, number_steps=20):
         N = np.ceil( (np.log(2) - np.log(delta)) / (2*epsilon)**2 )
