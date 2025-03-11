@@ -118,6 +118,9 @@ class MarkovChain:
         b = np.delete(transition_matrix[:, property_index], indices_to_delete)
         y = np.linalg.solve(np.identity(A.shape[0]) - A, b)
         return y[0]
+    
+    def verify_property_iterative(self, property, epsilon=0.01):
+        pass
 
     def verify_property_smc(self, property, epsilon, delta, number_steps=20):
         N = np.ceil( (np.log(2) - np.log(delta)) / (2*epsilon)**2 )
