@@ -154,18 +154,44 @@ def main():
             1 - Simulate the model
             2 - Verify the properties
           """)
-    choice = int(input('What do you want to do? '))
+    choice = int(input('What do you want to do (1 or 2)? '))
+    while choice not in [1, 2]:
+                print("Invalid option. Please choose 1 or 2.")
+                choice = int(input('What do you want to do (1 or 2)? '))
     if choice == 1:
         print('>>> Simulating model')
         steps = int(input('How many steps do you want to simulate? '))
         markov_graph = MarkovGraph(model)
         markov_graph.plot_complete_graph()
         if isinstance(model, MarkovDecisionProcess):
+            print("""Simulation mode options:  
+                    1 - Random simulation
+                    2 - Manual simulation
+                  """)
+            sim_mode = input("Choose simulation mode (1 or 2): ")
+            while sim_mode not in ['1', '2']:
+                print("Invalid option. Please choose 1 or 2.")
+                sim_mode = input("Choose simulation mode (1 or 2): ")
             actions = model.simulation_init()
-            markov_graph.plot_simulation()  
+            markov_graph.plot_simulation()
             time.sleep(1)
-            for _ in range(steps):
-                action = np.random.choice(list(actions))
+            for i in range(steps):
+                print(f"Step {i+1}:")
+                if sim_mode == '1':
+                    action = np.random.choice(list(actions))
+                    print("Randomly chosen action:", action)
+                else:
+                    if actions == {"no_action"}:
+                        action = "no_action"
+                        print("No decision required")
+                    else:
+                        available_actions = [a for a in actions if a != "no_action"]
+                        print("Available actions: " + ", ".join(available_actions))
+                        action = input("Choose an action: ")
+                        while action not in available_actions:
+                            print("Invalid action. Please choose one of the following:")
+                            print(", ".join(available_actions))
+                            action = input("Choose an action: ")
                 _, actions = model.simulation_step(action)
                 markov_graph.plot_simulation()
                 time.sleep(1)
@@ -190,7 +216,7 @@ def main():
             print(f'Probability: {y}')
         elif technique == 2:
             print('Not implemented')
-        if technique == 3:
+        elif technique == 3:
             gama = model.verify_property_smc(property, 0.01, 0.01)
             print(f'Probability: {gama}')
     else:
