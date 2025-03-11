@@ -8,6 +8,8 @@ class TemporaryModel:
         self.action_transitions = []
         self.model_type = None
 
+    # verify if some state doesn't have a leaving transition
+    # if so, add a 100% transition to itself
 
     # verify if all the transitions leaving a state are declared in the same line
     def verify_model(self):
@@ -28,7 +30,6 @@ class TemporaryModel:
             for transition in self.action_transitions:
                 action_states.add(transition["from"])
             
-
             for transition in self.transitions:
                 if transition['from'] in action_states:
                     raise Exception(f'Error: transitions with and without actions leaving state {transition["from"]}')
