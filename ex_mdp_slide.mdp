@@ -1,0 +1,10 @@
+States II, CI, AI, CC, CA, AC, AA, F, N;
+Actions p, a, c;
+II[p] -> 2:CI + 1:AI;
+CI[c] -> 1:CC;
+AI[a] -> 1:AA;
+AA -> 1:N;
+CC -> 1:N + 1:F;
+CA -> 1:F;
+AC -> 1:F;
+F -> 1:F;
