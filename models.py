@@ -1,4 +1,6 @@
 import numpy as np
+from copy import deepcopy
+from scipy.optimize import linprog
 
 class TemporaryModel:
     def __init__(self):
@@ -110,13 +112,16 @@ class MarkovChain:
         transition_matrix = np.array(self.transition_matrix)
         property_index = self.states.index(property)
         indices_to_delete = [property_index]
+
         for i in range(transition_matrix.shape[0]):
             if i != property_index and transition_matrix[i, i] == 1:
                 indices_to_delete.append(i)
+
         A_temp = np.delete(transition_matrix, indices_to_delete, axis=0)
         A = np.delete(A_temp, indices_to_delete, axis=1)
         b = np.delete(transition_matrix[:, property_index], indices_to_delete)
         y = np.linalg.solve(np.identity(A.shape[0]) - A, b)
+
         return y[0]
     
     def verify_property_iterative(self, property, epsilon=1e-4, max_iterations=10000):
@@ -192,6 +197,7 @@ class MarkovDecisionProcess(MarkovChain):
 
     def build_transition_matrix(self):
         state_action_pairs = []
+
         for state in self.states:
             actions = list(self.possible_actions(state))
             for action in actions:
@@ -207,6 +213,60 @@ class MarkovDecisionProcess(MarkovChain):
     
         self.transition_matrix = transition_matrix
         self.actions_by_state = state_action_pairs
+
+    def verify_property_linear(self, property):
+        transition_matrix = deepcopy(self.transition_matrix)
+
+        print(f'{transition_matrix=}')
+
+        property_index = self.states.index(property)
+
+        rows_to_delete = []
+        columns_to_delete = [property_index]
+
+        # searching for indexes to delete
+        for i in range(len(self.actions_by_state)):
+            if self.actions_by_state[i][0] == property:
+                rows_to_delete.append(i)
+
+        A_temp = np.delete(transition_matrix, rows_to_delete, axis=0)
+
+        b = deepcopy(A_temp[:, property_index])
+
+        A = -1*np.delete(A_temp, columns_to_delete, axis=1)
+
+        print(f'{A=}')
+        print(f'{b=}')
+
+        actions_states_mapping = np.delete(np.array(self.actions_by_state), rows_to_delete, axis=0)
+
+        print(f'{self.states=}')
+        states_without_property = deepcopy(self.states)
+        states_without_property.remove(property)
+
+        for i in range(len(actions_states_mapping)):
+            state, action = actions_states_mapping[i]
+            A[i, states_without_property.index(state)] += 1 
+
+
+        for i, state in enumerate(states_without_property):
+            if state != property:
+                line1 = np.zeros(A.shape[1])
+                line1[i] = -1
+                line2 = np.zeros(A.shape[1])
+                line2[i] = 1
+                A = np.vstack((A, line1))
+                A = np.vstack((A, line2))
+
+                b = np.append(b, [-1])
+                b = np.append(b, [0])
+
+        c = np.ones(A.shape[1])
+
+        res = linprog(c, A_ub=-1*A, b_ub=-1*b, method='highs')
+
+        print(res.x)
+
 
     def allowed_transitions(self, state, action):
         possible_states = []
