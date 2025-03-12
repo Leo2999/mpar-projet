@@ -15,16 +15,31 @@ class gramPrintListener(gramListener):
         self.model = model
 
     def enterDefstates(self, ctx):
-        self.model.states = [str(x) for x in ctx.ID()]
+        if hasattr(ctx, 'states_reward') and ctx.states_reward() is not None:
+            rewards = {}
+            state_rewards_ctx = ctx.states_reward().state_reward_list()
+            for sr in state_rewards_ctx.state_reward():
+                state_name = sr.ID().getText()
+                reward_val = int(sr.INT().getText())
+                rewards[state_name] = reward_val
+            self.model.states = list(rewards.keys())
+            self.model.state_rewards = rewards
+        elif hasattr(ctx, 'states_no_reward') and ctx.states_no_reward() is not None:
+            self.model.states = [id_token.getText() for id_token in ctx.states_no_reward().state_list().ID()]
+            self.model.state_rewards = {}  
+        else:
+            raise Exception("Definizione degli stati non conforme alla grammatica.")
 
+
+            
     def enterDefactions(self, ctx):
-        self.model.actions = [str(x) for x in ctx.ID()]
+        self.model.actions = [x.getText() for x in ctx.ID()]
 
     def enterTransact(self, ctx):
-        ids = [str(x) for x in ctx.ID()]
+        ids = [x.getText() for x in ctx.ID()]
         dep = ids.pop(0)
         act = ids.pop(0)
-        weights = [int(str(x)) for x in ctx.INT()]
+        weights = [int(x.getText()) for x in ctx.INT()]
         for i in range(len(ids)):
             self.model.action_transitions.append({
                 'from': dep,
@@ -34,11 +49,15 @@ class gramPrintListener(gramListener):
             })
 
     def enterTransnoact(self, ctx):
-        ids = [str(x) for x in ctx.ID()]
+        ids = [x.getText() for x in ctx.ID()]
         dep = ids.pop(0)
-        weights = [int(str(x)) for x in ctx.INT()]
+        weights = [int(x.getText()) for x in ctx.INT()]
         for i in range(len(ids)):
-            self.model.transitions.append({'from': dep,'to': ids[i],'weight': weights[i]})
+            self.model.transitions.append({
+                'from': dep,
+                'to': ids[i],
+                'weight': weights[i]
+            })
 
 class MarkovGraph:
     def __init__(self, model):
