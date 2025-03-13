@@ -269,8 +269,6 @@ class MarkovDecisionProcess(MarkovChain):
     def verify_property_linear(self, property):
         transition_matrix = deepcopy(self.transition_matrix)
 
-        print(f'{transition_matrix=}')
-
         property_index = self.states.index(property)
 
         rows_to_delete = []
@@ -287,12 +285,8 @@ class MarkovDecisionProcess(MarkovChain):
 
         A = -1*np.delete(A_temp, columns_to_delete, axis=1)
 
-        print(f'{A=}')
-        print(f'{b=}')
-
         actions_states_mapping = np.delete(np.array(self.actions_by_state), rows_to_delete, axis=0)
 
-        print(f'{self.states=}')
         states_without_property = deepcopy(self.states)
         states_without_property.remove(property)
 
@@ -317,7 +311,7 @@ class MarkovDecisionProcess(MarkovChain):
 
         res = linprog(c, A_ub=-1*A, b_ub=-1*b, method='highs')
 
-        print(res.x)
+        return res.x[0]
 
 
     def allowed_transitions(self, state, action):

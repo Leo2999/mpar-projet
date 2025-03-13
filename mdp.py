@@ -243,7 +243,8 @@ def main():
                 gama = model.verify_property_smc(property, 0.01, 0.01)
                 print(f'Probability: {gama}')
         else:
-            model.verify_property_linear(property)
+            y = model.verify_property_linear(property)
+            print(f'Probability: {y}')
     elif choice == 3:
         markov_graph = MarkovGraph(model)
         markov_graph.plot_complete_graph()
