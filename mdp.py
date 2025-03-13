@@ -15,20 +15,21 @@ class gramPrintListener(gramListener):
         self.model = model
 
     def enterDefstates(self, ctx):
-        int_tokens = ctx.getTokens(gramParser.INT)
-        if int_tokens and len(int_tokens) > 0:
+        # Se è presente una state_reward_list, allora gli stati sono definiti con reward
+        if ctx.state_reward_list() is not None:
             rewards = {}
-            id_tokens = ctx.ID() 
-            for i, id_token in enumerate(id_tokens):
-                state = id_token.getText()
-                reward_val = int(int_tokens[i].getText())
+            # Itera sui contesti figli corrispondenti a ciascun state_reward
+            for sr in ctx.state_reward_list().state_reward():
+                state = sr.ID().getText()  # Recupera il token ID dallo state_reward
+                reward_val = int(sr.INT().getText())  # Recupera il token INT corrispondente
                 rewards[state] = reward_val
             self.model.states = list(rewards.keys())
             self.model.state_rewards = rewards
-        else:
-            id_tokens = ctx.ID()
+        # Altrimenti, se gli stati sono definiti semplicemente con una lista (state_list)
+        elif ctx.state_list() is not None:
+            id_tokens = ctx.state_list().getTokens(gramParser.ID)
             self.model.states = [token.getText() for token in id_tokens]
-            self.model.state_rewards = {}  
+            self.model.state_rewards = {}
 
             
     def enterDefactions(self, ctx):
