@@ -15,17 +15,14 @@ class gramPrintListener(gramListener):
         self.model = model
 
     def enterDefstates(self, ctx):
-        # Se è presente una state_reward_list, allora gli stati sono definiti con reward
         if ctx.state_reward_list() is not None:
             rewards = {}
-            # Itera sui contesti figli corrispondenti a ciascun state_reward
             for sr in ctx.state_reward_list().state_reward():
-                state = sr.ID().getText()  # Recupera il token ID dallo state_reward
-                reward_val = int(sr.INT().getText())  # Recupera il token INT corrispondente
+                state = sr.ID().getText()  
+                reward_val = int(sr.INT().getText()) 
                 rewards[state] = reward_val
             self.model.states = list(rewards.keys())
             self.model.state_rewards = rewards
-        # Altrimenti, se gli stati sono definiti semplicemente con una lista (state_list)
         elif ctx.state_list() is not None:
             id_tokens = ctx.state_list().getTokens(gramParser.ID)
             self.model.states = [token.getText() for token in id_tokens]
@@ -172,11 +169,12 @@ def main():
     print("""Options: 
             1 - Simulate the model
             2 - Verify the properties
+            3 - Verify the expected reward
           """)
-    choice = int(input('What do you want to do (1 or 2)? '))
-    while choice not in [1, 2]:
-                print("Invalid option. Please choose 1 or 2.")
-                choice = int(input('What do you want to do (1 or 2)? '))
+    choice = int(input('What do you want to do (1,2 or 3)? '))
+    while choice not in [1, 2, 3]:
+                print("Invalid option. Please choose 1,2 or 3.")
+                choice = int(input('What do you want to do (1, 2 or 3)? '))
     if choice == 1:
         print('>>> Simulating model')
         steps = int(input('How many steps do you want to simulate? '))
@@ -246,9 +244,18 @@ def main():
                 print(f'Probability: {gama}')
         else:
             model.verify_property_linear(property)
+    elif choice == 3:
+        markov_graph = MarkovGraph(model)
+        markov_graph.plot_complete_graph()
+        init_state = input('Starting State: ')
+        target_state = input('Target State: ')
+        if not isinstance(model, MarkovDecisionProcess):
+            expected_reward = model.verify_expected_reward_MC(init_state, target_state)
+            print(f'The expected reward from {init_state} to {target_state} is: {expected_reward}')
+        else:
+            print("BOH")
     else:
         print('>>> Error in the choice')
 
 if __name__ == '__main__':
     main()
-    

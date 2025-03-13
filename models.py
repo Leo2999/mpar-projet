@@ -63,7 +63,10 @@ class TemporaryModel:
 
     def generate_model(self):
         if self.verify_model() == 'MC':
-            return MarkovChain(self.states, self.transitions)
+            model = MarkovChain(self.states, self.transitions)
+            model.state_rewards = self.state_rewards  
+            return model
+        
         else:
             return MarkovDecisionProcess(
                 self.states,
@@ -181,6 +184,55 @@ class MarkovChain:
         for i in range(len(possible_states)):
             self.trace(f'{self.actual_state} -> {possible_states[i]}: {probabilities[i]*100}%')
         self.trace()
+
+    def get_reachable_states(self, target):
+        reverse_graph = {state: set() for state in self.states}
+        for transition in self.transitions:
+            reverse_graph[transition['to']].add(transition['from'])
+        reachable = set()
+        stack = [target]
+        while stack:
+            current = stack.pop()
+            if current in reachable:
+                continue
+            reachable.add(current)
+            for pred in reverse_graph[current]:
+                if pred not in reachable:
+                    stack.append(pred)
+        return reachable
+    
+    def verify_expected_reward_MC(self, init_state, target_state, epsilon=1e-4, max_iterations=10000):
+       
+        if init_state not in self.states or target_state not in self.states:
+            raise Exception("Error: state not defined")
+
+        reachable = self.get_reachable_states(target_state)
+        if init_state not in reachable:
+            return 0
+
+        r_immediate = {s: getattr(self, 'state_rewards', {}).get(s, 0) for s in reachable}
+        R = {s: 0 for s in reachable}
+
+        for iteration in range(max_iterations):
+            R_new = {}
+            diff = 0
+            for s in reachable:
+                if s == target_state:
+                    R_new[s] = 0
+                else:
+                    succ, probs = self.allowed_transitions(s)
+                    total = 0
+                    for j, p in zip(succ, probs):
+                        if j in reachable:
+                            total += p * R[j]
+                    R_new[s] = r_immediate[s] + total
+                diff = max(diff, abs(R_new[s] - R[s]))
+            R = R_new
+            if diff < epsilon:
+                break
+
+        return R[init_state]
+
 
 class MarkovDecisionProcess(MarkovChain):
     def __init__(self, states, actions, transitions, action_transitions):
