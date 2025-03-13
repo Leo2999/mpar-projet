@@ -253,7 +253,8 @@ def main():
             expected_reward = model.expected_reward_MC(target_state)
             print(f'The expected reward to {target_state} is: {expected_reward}')
         else:
-            print("BOH")
+            expected_reward = model.expected_reward_MDP(target_state)
+            print(f'The expected reward to {target_state} is: {expected_reward}')
     else:
         print('>>> Error in the choice')
 
