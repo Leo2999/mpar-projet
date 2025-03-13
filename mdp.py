@@ -169,7 +169,7 @@ def main():
     print("""Options: 
             1 - Simulate the model
             2 - Verify the properties
-            3 - Verify the expected reward
+            3 - Expected reward
           """)
     choice = int(input('What do you want to do (1,2 or 3)? '))
     while choice not in [1, 2, 3]:
@@ -248,11 +248,10 @@ def main():
     elif choice == 3:
         markov_graph = MarkovGraph(model)
         markov_graph.plot_complete_graph()
-        init_state = input('Starting State: ')
         target_state = input('Target State: ')
         if not isinstance(model, MarkovDecisionProcess):
-            expected_reward = model.verify_expected_reward_MC(init_state, target_state)
-            print(f'The expected reward from {init_state} to {target_state} is: {expected_reward}')
+            expected_reward = model.expected_reward_MC(target_state)
+            print(f'The expected reward to {target_state} is: {expected_reward}')
         else:
             print("BOH")
     else:
