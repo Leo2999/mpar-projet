@@ -2,15 +2,11 @@ grammar gram;
 
 program : defstates defactions? transitions EOF;
 
-defstates : states_reward | states_no_reward;
-
-states_reward : STATES state_reward_list SEMI;
+defstates : STATES (state_reward_list | state_list) SEMI;
 
 state_reward_list : state_reward (VIRG state_reward)*;
 
 state_reward : ID DPOINT INT;
-
-states_no_reward : STATES state_list SEMI;
 
 state_list : ID (VIRG ID)*;
 

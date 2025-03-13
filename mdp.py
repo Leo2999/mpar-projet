@@ -15,21 +15,20 @@ class gramPrintListener(gramListener):
         self.model = model
 
     def enterDefstates(self, ctx):
-        if hasattr(ctx, 'states_reward') and ctx.states_reward() is not None:
+        int_tokens = ctx.getTokens(gramParser.INT)
+        if int_tokens and len(int_tokens) > 0:
             rewards = {}
-            state_rewards_ctx = ctx.states_reward().state_reward_list()
-            for sr in state_rewards_ctx.state_reward():
-                state_name = sr.ID().getText()
-                reward_val = int(sr.INT().getText())
-                rewards[state_name] = reward_val
+            id_tokens = ctx.ID() 
+            for i, id_token in enumerate(id_tokens):
+                state = id_token.getText()
+                reward_val = int(int_tokens[i].getText())
+                rewards[state] = reward_val
             self.model.states = list(rewards.keys())
             self.model.state_rewards = rewards
-        elif hasattr(ctx, 'states_no_reward') and ctx.states_no_reward() is not None:
-            self.model.states = [id_token.getText() for id_token in ctx.states_no_reward().state_list().ID()]
-            self.model.state_rewards = {}  
         else:
-            raise Exception("Definizione degli stati non conforme alla grammatica.")
-
+            id_tokens = ctx.ID()
+            self.model.states = [token.getText() for token in id_tokens]
+            self.model.state_rewards = {}  
 
             
     def enterDefactions(self, ctx):
