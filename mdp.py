@@ -227,12 +227,13 @@ def main():
             print(""" Techniques:
                     1 - Linear system resolution
                     2 - Iterative resolution
-                    3 - SMC resolution
+                    3 - SMC quantitative resolution
+                    4 - SMC qualitative resolution
                 """)
-            technique = int(input('Which technique do you want to use (1,2 or 3)? '))
-            while technique not in [1, 2, 3]:
+            technique = int(input('Which technique do you want to use (1,2, 3 or 4)? '))
+            while technique not in [1, 2, 3, 4]:
                     print("Invalid technique. Please choose 1,2 or 3.")
-                    technique = int(input('What do you want to do (1,2 or 3)? '))
+                    technique = int(input('What do you want to do (1,2, 3 or 4)? '))
             if technique == 1:
                 y = model.verify_property_linear_system(property)
                 print(f'Probability: {y}')
@@ -240,8 +241,19 @@ def main():
                 y = model.verify_property_iterative(property)
                 print(f'Probability: {y}')
             elif technique == 3:
-                gama = model.verify_property_smc(property, 0.01, 0.01)
+                gama = model.verify_property_smc_quant(property, 0.01, 0.01)
                 print(f'Probability: {gama}')
+            elif technique == 4:
+                theta = float(input('Theta value? '))
+                epsilon = float(input('Epsilon value? '))
+                res = model.verify_property_smc_qual(property, theta, epsilon)
+
+                if res == 1:
+                    print(f'The probability is smaller than {theta}')
+                elif res == 0:
+                    print(f'The probability is bigger than {theta}')
+                else:
+                    print('Answer not found')
         else:
             y = model.verify_property_linear(property)
             print(f'Probability: {y}')

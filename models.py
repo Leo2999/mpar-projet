@@ -150,7 +150,7 @@ class MarkovChain:
             p = p_new
         return p[0]
 
-    def verify_property_smc(self, property, epsilon, delta, number_steps=20):
+    def verify_property_smc_quant(self, property, epsilon, delta, number_steps=20):
         N = np.ceil( (np.log(2) - np.log(delta)) / (2*epsilon)**2 )
         count = 0
         self.simulation_trace = False
@@ -167,6 +167,61 @@ class MarkovChain:
         self.simulation_trace = True
         gama = count / N
         return gama
+    
+    def verify_property_smc_qual(
+            self, 
+            property, 
+            theta, 
+            epsilon, 
+            alpha=0.01, 
+            beta=0.01, 
+            max_simulations=10000, 
+            max_steps_per_simulation=1000):
+        
+        gamma1 = theta - epsilon
+        gamma0 = theta + epsilon
+
+        A = (1 - beta) / alpha
+        B = beta / (1 - alpha)
+
+        m = 0   # total number of simulations
+        dm = 0  # number of simulations accepted
+
+        self.simulation_trace = False
+        hypothesis_accepted = False
+
+
+        while not hypothesis_accepted and m < max_simulations:
+            is_property_verified = False
+            self.simulation_init()
+            i = 0
+
+            while not is_property_verified and i < max_steps_per_simulation:
+                is_property_verified = (self.actual_state == property)
+                self.simulation_step()
+                i += 1
+            
+            if is_property_verified:
+                dm += 1
+
+            m += 1
+            Rm = ( (gamma1 ** dm) * (1 - gamma1) ** (m - dm) ) / ( (gamma0 ** dm) * (1 - gamma0) ** (m - dm) )
+            if Rm >= A or Rm <= B:
+                hypothesis_accepted = True
+
+
+            if m % 100 == 0:
+                print(f'>>> [LOG] Simulation {m} - Rm {Rm} - A {A} - B {B}')
+
+        self.simulation_trace = True
+
+        if hypothesis_accepted and Rm >= A:
+            return 1
+        elif hypothesis_accepted and Rm < B:
+            return 0
+        else:
+            return -1
+
 
     def allowed_transitions(self, state):
         possible_states = []
