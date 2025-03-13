@@ -26,6 +26,33 @@ class gramListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by gramParser#state_reward_list.
+    def enterState_reward_list(self, ctx:gramParser.State_reward_listContext):
+        pass
+
+    # Exit a parse tree produced by gramParser#state_reward_list.
+    def exitState_reward_list(self, ctx:gramParser.State_reward_listContext):
+        pass
+
+
+    # Enter a parse tree produced by gramParser#state_reward.
+    def enterState_reward(self, ctx:gramParser.State_rewardContext):
+        pass
+
+    # Exit a parse tree produced by gramParser#state_reward.
+    def exitState_reward(self, ctx:gramParser.State_rewardContext):
+        pass
+
+
+    # Enter a parse tree produced by gramParser#state_list.
+    def enterState_list(self, ctx:gramParser.State_listContext):
+        pass
+
+    # Exit a parse tree produced by gramParser#state_list.
+    def exitState_list(self, ctx:gramParser.State_listContext):
+        pass
+
+
     # Enter a parse tree produced by gramParser#defactions.
     def enterDefactions(self, ctx:gramParser.DefactionsContext):
         pass
