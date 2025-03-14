@@ -248,13 +248,14 @@ def main():
     elif choice == 3:
         markov_graph = MarkovGraph(model)
         markov_graph.plot_complete_graph()
+        initial_state = input('Initial State:' )
         target_state = input('Target State: ')
         if not isinstance(model, MarkovDecisionProcess):
-            expected_reward = model.expected_reward_MC(target_state)
-            print(f'The expected reward to {target_state} is: {expected_reward}')
+            expected_reward = model.expected_reward_MC(initial_state, target_state)
+            print(f'The expected reward from {initial_state} to {target_state} is: {expected_reward}')
         else:
             expected_reward = model.expected_reward_MDP(target_state)
-            print(f'The expected reward to {target_state} is: {expected_reward}')
+            print(f'The expected reward from {initial_state} to {target_state} is: {expected_reward}')
     else:
         print('>>> Error in the choice')
 

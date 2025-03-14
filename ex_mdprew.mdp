@@ -1,5 +1,0 @@
-States S0:2, S1:1, S2:3;
-Actions a;
-S0[a] -> 1:S1;
-S1[a] -> 1:S2;
-S2 -> 1:S2;

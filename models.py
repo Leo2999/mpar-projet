@@ -74,7 +74,7 @@ class TemporaryModel:
             self.transitions,
             self.action_transitions
             )
-            model.state_rewards = self.state_rewards 
+            model.state_rewards = self.state_rewards  # Aggiungi questa linea per il MDP
             return model
 
 class MarkovChain:
@@ -186,39 +186,36 @@ class MarkovChain:
         for i in range(len(possible_states)):
             self.trace(f'{self.actual_state} -> {possible_states[i]}: {probabilities[i]*100}%')
         self.trace()
-    
-    def expected_reward_MC(self, target_state, epsilon=1e-4, max_iterations=10000):
-        init_state = self.states[0]
-        
-        if target_state not in self.states:
-            raise Exception("Target state not defined")
-        
-        prob = self.verify_property_iterative(target_state, epsilon, max_iterations)
-        if abs(prob - 1.0) > 1e-4:  
-            return 0
-        
-        r_immediate = {s: getattr(self, 'state_rewards', {}).get(s, 0) for s in self.states}
-        R = {s: 0 for s in self.states}
-        
-        for iteration in range(max_iterations):
-            R_new = {}
-            diff = 0
-            for s in self.states:
-                if s == target_state:
-                    R_new[s] = 0
-                else:
-                    succ, probs = self.allowed_transitions(s)
-                    total = 0
-                    for j, p in zip(succ, probs):
-                        total += p * (r_immediate[j] + R[j])  # Reward assegnato solo dopo la transizione
-                    R_new[s] = total
-                diff = max(diff, abs(R_new[s] - R[s]))
-            R = R_new
-            if diff < epsilon:
-                break
 
-        return R[init_state]
+    def expected_reward_MC(self, init_state, target_states, num_simulations=10000, max_iterations=1000):
 
+        total_reward = 0.0
+
+        for sim in range(num_simulations):
+            current_state = init_state
+            cumulative_reward = 0
+            reached_target = False
+
+            for _ in range(max_iterations):
+                if current_state in target_states:
+                    reached_target = True
+                    break  
+                succ, probs = self.allowed_transitions(current_state)
+                if not succ:
+                    break
+                next_state = np.random.choice(succ, p=probs)
+                if next_state != current_state:
+                    cumulative_reward += self.state_rewards.get(current_state, 0)
+                current_state = next_state
+
+            if not reached_target:
+                return 0
+
+            total_reward += cumulative_reward
+
+        return total_reward / num_simulations
+
+   
 class MarkovDecisionProcess(MarkovChain):
     def __init__(self, states, actions, transitions, action_transitions):
         self.actions = actions
@@ -330,83 +327,4 @@ class MarkovDecisionProcess(MarkovChain):
                 possible_actions.add(transition['action'])
         return possible_actions
     
-    def reachability_probability(self, target_state, epsilon=1e-4, max_iterations=10000):
-        
-        V = {s: 0 for s in self.states}
-        V[target_state] = 1.0
-
-        for _ in range(max_iterations):
-            V_new = {}
-            diff = 0
-            for s in self.states:
-                if s == target_state:
-                    V_new[s] = 1.0
-                else:
-                    actions = self.possible_actions(s)
-                    if not actions:
-                        V_new[s] = 0
-                    else:
-                        action_values = []
-                        for a in actions:
-                            succ, probs = self.allowed_transitions(s, a)
-                            if not succ:
-                                action_values.append(0)
-                            else:
-                                action_values.append(sum(probs[i] * V[succ[i]] for i in range(len(succ))))
-                        V_new[s] = max(action_values)
-                diff = max(diff, abs(V_new[s] - V[s]))
-            V = V_new
-            if diff < epsilon:
-                break
-        return V[self.states[0]]
-
-
-    def expected_reward_MDP(self, target_state, epsilon=1e-4, max_iterations=10000):
-        init_state = self.states[0]
-        if target_state not in self.states:
-            raise Exception("State not defined")
     
-        prob = self.reachability_probability(target_state, epsilon, max_iterations)
-        if abs(prob - 1.0) > 1e-6:
-            return 0
-
-        n = len(self.states)
-        state_index = {s: i for i, s in enumerate(self.states)}
-        A_ub = []
-        b_ub = []
-    
-        for s in self.states:
-            if s == target_state:
-                continue
-            actions = list(self.possible_actions(s))
-            if not actions:
-                row = [0] * n
-                row[state_index[s]] = -1
-                A_ub.append(row)
-                b_ub.append(-self.state_rewards.get(s, 0))
-            else:
-                for a in actions:
-                    row = [0] * n
-                    row[state_index[s]] = -1  
-                    succ, probs = self.allowed_transitions(s, a)
-                    for idx, j in enumerate(succ):
-                        row[state_index[j]] += probs[idx]
-                    A_ub.append(row)
-                    b_ub.append(-self.state_rewards.get(s, 0))
-        
-        bounds = []
-        for s in self.states:
-            if s == target_state:
-                bounds.append((0, 0))
-            else:
-                bounds.append((None, None))
-        
-        c = [0] * n
-        c[state_index[init_state]] = 1
-
-        res = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method='highs')
-        if res.success:
-            v = res.x
-            return v[state_index[init_state]]
-        else:
-            raise Exception("There is no solution for this problem")
