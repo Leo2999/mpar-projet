@@ -68,12 +68,14 @@ class TemporaryModel:
             return model
         
         else:
-            return MarkovDecisionProcess(
+            model = MarkovDecisionProcess(
                 self.states,
                 self.actions,
                 self.transitions,
                 self.action_transitions
             )
+            model.state_rewards = self.state_rewards  
+            return model
 
 class MarkovChain:
     def __init__(self, states, transitions, simulation_trace=True):
@@ -292,6 +294,7 @@ class MarkovChain:
 class MarkovDecisionProcess(MarkovChain):
     def __init__(self, states, actions, transitions, action_transitions):
         self.actions = actions
+        self.actions.append('no_action')
         self.action_transitions = action_transitions
         super().__init__(states, transitions)
         self.last_action = None          
@@ -399,3 +402,39 @@ class MarkovDecisionProcess(MarkovChain):
             if transition['from'] == state:
                 possible_actions.add(transition['action'])
         return possible_actions
+    
+
+    def q_learning(self, gamma=0.5, simulations_number=10000):
+        index = lambda s, a: self.states.index(s) * len(self.actions) + self.actions.index(a)
+        Q = np.zeros(len(self.states) * len(self.actions))
+
+        self.simulation_trace = False
+        for i in range(simulations_number):
+            alpha = 1/(i + 1)
+
+            if i % 100 == 0:
+                self.simulation_init()
+
+            state = self.actual_state
+            possible_actions = self.possible_actions(state)
+
+            action = np.random.choice(list(possible_actions))
+            next_state, next_possible_actions = self.simulation_step(action)
+
+            Qtemp = deepcopy(Q)
+            maxQ = 0
+            for _action in next_possible_actions:
+                if Q[index(next_state, _action)] > maxQ:
+                    maxQ = Q[index(next_state, _action)]
+
+            delta = self.state_rewards[state] + gamma * maxQ - Q[index(state, action)]
+            Qtemp[index(state, action)] = Q[index(state, action)] + alpha*delta
+
+            Q = deepcopy(Qtemp)
+        
+        self.simulation_trace = True
+
+        return Q
+
+
+

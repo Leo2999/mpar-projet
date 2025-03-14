@@ -170,9 +170,10 @@ def main():
             1 - Simulate the model
             2 - Verify the properties
             3 - Verify the expected reward
+            4 - Reinforcement Learning
           """)
-    choice = int(input('What do you want to do (1,2 or 3)? '))
-    while choice not in [1, 2, 3]:
+    choice = int(input('What do you want to do (1,2,3 or 4)? '))
+    while choice not in [1, 2, 3, 4]:
                 print("Invalid option. Please choose 1,2 or 3.")
                 choice = int(input('What do you want to do (1, 2 or 3)? '))
     if choice == 1:
@@ -230,10 +231,10 @@ def main():
                     3 - SMC quantitative resolution
                     4 - SMC qualitative resolution
                 """)
-            technique = int(input('Which technique do you want to use (1,2, 3 or 4)? '))
-            while technique not in [1, 2, 3, 4]:
-                    print("Invalid technique. Please choose 1,2 or 3.")
-                    technique = int(input('What do you want to do (1,2, 3 or 4)? '))
+            technique = int(input('Which technique do you want to use (1,2, 3, 4 or 5)? '))
+            while technique not in [1, 2, 3, 4, 5]:
+                    print("Invalid technique. Please choose 1,2, 3, 4 or 5.")
+                    technique = int(input('What do you want to do (1,2, 3, 4 or 5)? '))
             if technique == 1:
                 y = model.verify_property_linear_system(property)
                 print(f'Probability: {y}')
@@ -267,6 +268,14 @@ def main():
             print(f'The expected reward from {init_state} to {target_state} is: {expected_reward}')
         else:
             print("BOH")
+    elif choice == 4:
+        if isinstance(model, MarkovDecisionProcess):
+            Q = model.q_learning()
+            for i, state in enumerate(model.states):
+                for j, action in enumerate(model.actions):
+                    print(f'>>> {state}({action}) : {Q[i*len(model.actions) + j]}')
+
+
     else:
         print('>>> Error in the choice')
 
