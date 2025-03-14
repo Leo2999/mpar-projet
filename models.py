@@ -130,17 +130,15 @@ class MarkovChain:
         return y[0]
     
 
-    def verify_property_iterative(self, target_states, epsilon=1e-4, max_iterations=10000):
+    def verify_property_iterative(self, target_states, initial_state, epsilon=1e-4, max_iterations=10000):
         if isinstance(target_states, str):
             if ',' in target_states:
                 target_states = [s.strip() for s in target_states.split(',')]
             else:
                 target_states = [target_states]
-    
         for t in target_states:
             if t not in self.states:
                 raise Exception(f"Error: state '{t}' not declared")
-        
         target_indices = [self.states.index(t) for t in target_states]
         n = len(self.states)
         
@@ -164,7 +162,7 @@ class MarkovChain:
                 p = p_new
                 break
             p = p_new
-        return p[0]
+        return p[self.states.index(initial_state)]
 
     
     def verify_property_smc(self, property, epsilon, delta, number_steps=20):
@@ -203,9 +201,8 @@ class MarkovChain:
         self.trace()
 
     def expected_reward_MC(self, init_state, target_states, num_simulations=10000, max_iterations=1000):
-
+        p = self.verify_property_iterative(target_states)
         total_reward = 0.0
-
         for sim in range(num_simulations):
             current_state = init_state
             cumulative_reward = 0
@@ -222,12 +219,9 @@ class MarkovChain:
                 if next_state != current_state:
                     cumulative_reward += self.state_rewards.get(current_state, 0)
                 current_state = next_state
-
             if not reached_target:
                 return 0
-
             total_reward += cumulative_reward
-
         return total_reward / num_simulations
 
    
@@ -342,4 +336,4 @@ class MarkovDecisionProcess(MarkovChain):
                 possible_actions.add(transition['action'])
         return possible_actions
     
-    
+   

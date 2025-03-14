@@ -237,7 +237,8 @@ def main():
                 y = model.verify_property_linear_system(property)
                 print(f'Probability: {y}')
             elif technique == 2:
-                y = model.verify_property_iterative(property)
+                initial_state = input('Initial State: ')    
+                y = model.verify_property_iterative(property, initial_state)
                 print(f'Probability: {y}')
             elif technique == 3:
                 gama = model.verify_property_smc(property, 0.01, 0.01)
@@ -254,7 +255,7 @@ def main():
             expected_reward = model.expected_reward_MC(initial_state, target_state)
             print(f'The expected reward from {initial_state} to {target_state} is: {expected_reward}')
         else:
-            expected_reward = model.expected_reward_MDP(target_state)
+            expected_reward = model.expected_reward_MDP(initial_state, target_state)
             print(f'The expected reward from {initial_state} to {target_state} is: {expected_reward}')
     else:
         print('>>> Error in the choice')
