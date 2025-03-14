@@ -136,28 +136,40 @@ class MarkovChain:
 
         return y[0]
     
-    def verify_property_iterative(self, property, epsilon=1e-4, max_iterations=10000):
-        if property not in self.states:
-            raise Exception(f"Error: stato '{property}' non dichiarato")
-        target_index = self.states.index(property)
+
+    def verify_property_iterative(self, target_states, initial_state, epsilon=1e-4, max_iterations=10000):
+        if isinstance(target_states, str):
+            if ',' in target_states:
+                target_states = [s.strip() for s in target_states.split(',')]
+            else:
+                target_states = [target_states]
+        for t in target_states:
+            if t not in self.states:
+                raise Exception(f"Error: state '{t}' not declared")
+        target_indices = [self.states.index(t) for t in target_states]
         n = len(self.states)
+        
         if not hasattr(self, 'transition_matrix'):
             self.build_transition_matrix()
         P = np.array(self.transition_matrix)
+        
         p = np.zeros(n)
-        p[target_index] = 1.0
+        for idx in target_indices:
+            p[idx] = 1.0
+
         for it in range(max_iterations):
             p_new = np.copy(p)
             for i in range(n):
-                if i == target_index or np.isclose(P[i, i], 1.0):
+                if i in target_indices or np.isclose(P[i, i], 1.0):
                     continue
                 p_new[i] = np.dot(P[i, :], p)
-            p_new[target_index] = 1.0
+            for idx in target_indices:
+                p_new[idx] = 1.0
             if np.max(np.abs(p_new - p)) < epsilon:
                 p = p_new
                 break
             p = p_new
-        return p[0]
+        return p[self.states.index(initial_state)]
 
     def verify_property_smc_quant(self, property, epsilon, delta, number_steps=20):
         N = np.ceil( (np.log(2) - np.log(delta)) / (2*epsilon)**2 )
@@ -250,9 +262,8 @@ class MarkovChain:
         self.trace()
 
     def expected_reward_MC(self, init_state, target_states, num_simulations=10000, max_iterations=1000):
-
+        p = self.verify_property_iterative(target_states)
         total_reward = 0.0
-
         for sim in range(num_simulations):
             current_state = init_state
             cumulative_reward = 0
@@ -269,12 +280,9 @@ class MarkovChain:
                 if next_state != current_state:
                     cumulative_reward += self.state_rewards.get(current_state, 0)
                 current_state = next_state
-
             if not reached_target:
                 return 0
-
             total_reward += cumulative_reward
-
         return total_reward / num_simulations
 
    
@@ -390,7 +398,6 @@ class MarkovDecisionProcess(MarkovChain):
                 possible_actions.add(transition['action'])
         return possible_actions
     
-
     def q_learning(self, gamma=0.5, simulations_number=10000):
         index = lambda s, a: self.states.index(s) * len(self.actions) + self.actions.index(a)
         Q = np.zeros(len(self.states) * len(self.actions))
@@ -422,6 +429,3 @@ class MarkovDecisionProcess(MarkovChain):
         self.simulation_trace = True
 
         return Q
-
-
-
