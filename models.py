@@ -74,7 +74,7 @@ class TemporaryModel:
             self.transitions,
             self.action_transitions
             )
-            model.state_rewards = self.state_rewards  # Aggiungi questa linea per il MDP
+            model.state_rewards = self.state_rewards 
             return model
 
 class MarkovChain:
@@ -129,29 +129,44 @@ class MarkovChain:
 
         return y[0]
     
-    def verify_property_iterative(self, property, epsilon=1e-4, max_iterations=10000):
-        if property not in self.states:
-            raise Exception(f"Error: stato '{property}' non dichiarato")
-        target_index = self.states.index(property)
+
+    def verify_property_iterative(self, target_states, epsilon=1e-4, max_iterations=10000):
+        if isinstance(target_states, str):
+            if ',' in target_states:
+                target_states = [s.strip() for s in target_states.split(',')]
+            else:
+                target_states = [target_states]
+    
+        for t in target_states:
+            if t not in self.states:
+                raise Exception(f"Error: state '{t}' not declared")
+        
+        target_indices = [self.states.index(t) for t in target_states]
         n = len(self.states)
+        
         if not hasattr(self, 'transition_matrix'):
             self.build_transition_matrix()
         P = np.array(self.transition_matrix)
+        
         p = np.zeros(n)
-        p[target_index] = 1.0
+        for idx in target_indices:
+            p[idx] = 1.0
+
         for it in range(max_iterations):
             p_new = np.copy(p)
             for i in range(n):
-                if i == target_index or np.isclose(P[i, i], 1.0):
+                if i in target_indices or np.isclose(P[i, i], 1.0):
                     continue
                 p_new[i] = np.dot(P[i, :], p)
-            p_new[target_index] = 1.0
+            for idx in target_indices:
+                p_new[idx] = 1.0
             if np.max(np.abs(p_new - p)) < epsilon:
                 p = p_new
                 break
             p = p_new
         return p[0]
 
+    
     def verify_property_smc(self, property, epsilon, delta, number_steps=20):
         N = np.ceil( (np.log(2) - np.log(delta)) / (2*epsilon)**2 )
         count = 0
