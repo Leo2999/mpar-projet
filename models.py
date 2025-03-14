@@ -10,10 +10,6 @@ class TemporaryModel:
         self.action_transitions = []
         self.model_type = None
 
-    # verify if some state doesn't have a leaving transition
-    # if so, add a 100% transition to itself
-
-    # verify if all the transitions leaving a state are declared in the same line
     def verify_model(self):
         self.model_type = 'MDP' if len(self.action_transitions) > 0 else 'MC'
 
@@ -262,7 +258,11 @@ class MarkovChain:
         self.trace()
 
     def expected_reward_MC(self, init_state, target_states, num_simulations=10000, max_iterations=1000):
-        p = self.verify_property_iterative(target_states)
+        p = self.verify_property_iterative(target_states, init_state)
+
+        if abs(p - 1) > 1e-3:
+            return 0
+
         total_reward = 0.0
         for sim in range(num_simulations):
             current_state = init_state

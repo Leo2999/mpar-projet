@@ -169,7 +169,7 @@ def main():
     print("""Options: 
             1 - Simulate the model
             2 - Verify the properties
-            3 - Verify the expected reward
+            3 - Verify the expected reward (only MC)
             4 - Reinforcement Learning
           """)
     choice = int(input('What do you want to do (1,2,3 or 4)? '))
