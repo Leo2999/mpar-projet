@@ -242,55 +242,35 @@ class MarkovChain:
             self.trace(f'{self.actual_state} -> {possible_states[i]}: {probabilities[i]*100}%')
         self.trace()
 
-    def get_reachable_states(self, target):
-        reverse_graph = {state: set() for state in self.states}
-        for transition in self.transitions:
-            reverse_graph[transition['to']].add(transition['from'])
-        reachable = set()
-        stack = [target]
-        while stack:
-            current = stack.pop()
-            if current in reachable:
-                continue
-            reachable.add(current)
-            for pred in reverse_graph[current]:
-                if pred not in reachable:
-                    stack.append(pred)
-        return reachable
-    
-    def verify_expected_reward_MC(self, init_state, target_state, epsilon=1e-4, max_iterations=10000):
-       
-        if init_state not in self.states or target_state not in self.states:
-            raise Exception("Error: state not defined")
+    def expected_reward_MC(self, init_state, target_states, num_simulations=10000, max_iterations=1000):
 
-        reachable = self.get_reachable_states(target_state)
-        if init_state not in reachable:
-            return 0
+        total_reward = 0.0
 
-        r_immediate = {s: getattr(self, 'state_rewards', {}).get(s, 0) for s in reachable}
-        R = {s: 0 for s in reachable}
+        for sim in range(num_simulations):
+            current_state = init_state
+            cumulative_reward = 0
+            reached_target = False
 
-        for iteration in range(max_iterations):
-            R_new = {}
-            diff = 0
-            for s in reachable:
-                if s == target_state:
-                    R_new[s] = 0
-                else:
-                    succ, probs = self.allowed_transitions(s)
-                    total = 0
-                    for j, p in zip(succ, probs):
-                        if j in reachable:
-                            total += p * R[j]
-                    R_new[s] = r_immediate[s] + total
-                diff = max(diff, abs(R_new[s] - R[s]))
-            R = R_new
-            if diff < epsilon:
-                break
+            for _ in range(max_iterations):
+                if current_state in target_states:
+                    reached_target = True
+                    break  
+                succ, probs = self.allowed_transitions(current_state)
+                if not succ:
+                    break
+                next_state = np.random.choice(succ, p=probs)
+                if next_state != current_state:
+                    cumulative_reward += self.state_rewards.get(current_state, 0)
+                current_state = next_state
 
-        return R[init_state]
+            if not reached_target:
+                return 0
 
+            total_reward += cumulative_reward
 
+        return total_reward / num_simulations
+
+   
 class MarkovDecisionProcess(MarkovChain):
     def __init__(self, states, actions, transitions, action_transitions):
         self.actions = actions

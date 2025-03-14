@@ -169,8 +169,12 @@ def main():
     print("""Options: 
             1 - Simulate the model
             2 - Verify the properties
+<<<<<<< HEAD
             3 - Verify the expected reward
             4 - Reinforcement Learning
+=======
+            3 - Expected reward
+>>>>>>> leor
           """)
     choice = int(input('What do you want to do (1,2,3 or 4)? '))
     while choice not in [1, 2, 3, 4]:
@@ -261,20 +265,20 @@ def main():
     elif choice == 3:
         markov_graph = MarkovGraph(model)
         markov_graph.plot_complete_graph()
-        init_state = input('Starting State: ')
+        initial_state = input('Initial State:' )
         target_state = input('Target State: ')
         if not isinstance(model, MarkovDecisionProcess):
-            expected_reward = model.verify_expected_reward_MC(init_state, target_state)
-            print(f'The expected reward from {init_state} to {target_state} is: {expected_reward}')
+            expected_reward = model.expected_reward_MC(initial_state, target_state)
+            print(f'The expected reward from {initial_state} to {target_state} is: {expected_reward}')
         else:
-            print("BOH")
+            expected_reward = model.expected_reward_MDP(target_state)
+            print(f'The expected reward from {initial_state} to {target_state} is: {expected_reward}')
     elif choice == 4:
         if isinstance(model, MarkovDecisionProcess):
             Q = model.q_learning()
             for i, state in enumerate(model.states):
                 for j, action in enumerate(model.actions):
                     print(f'>>> {state}({action}) : {Q[i*len(model.actions) + j]}')
-
 
     else:
         print('>>> Error in the choice')
