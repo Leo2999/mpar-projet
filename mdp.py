@@ -169,12 +169,8 @@ def main():
     print("""Options: 
             1 - Simulate the model
             2 - Verify the properties
-<<<<<<< HEAD
             3 - Verify the expected reward
             4 - Reinforcement Learning
-=======
-            3 - Expected reward
->>>>>>> leor
           """)
     choice = int(input('What do you want to do (1,2,3 or 4)? '))
     while choice not in [1, 2, 3, 4]:

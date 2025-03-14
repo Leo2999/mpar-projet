@@ -25,6 +25,13 @@ class TemporaryModel:
             
         if self.model_type == 'MDP':
             for transition in self.action_transitions:
+                if transition['from'] not in self.states:
+                    raise Exception(f'Error: undeclared state: {transition["from"]}')
+                if transition['to'] not in self.states:
+                    raise Exception(f'Error: undeclared state: {transition["to"]}')
+
+
+            for transition in self.action_transitions:
                 if transition["action"] not in self.actions:
                     raise Exception(f'Error: undeclared action: {transition["action"]}')
                 
